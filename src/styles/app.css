@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Classes added at runtime via JS – force generation */
+@source inline("opacity-60 cursor-wait");
+
+@utility scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Safe area insets for mobile devices */
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.top-header {
+  padding-top: env(safe-area-inset-top);
+}

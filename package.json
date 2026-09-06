@@ -1,0 +1,27 @@
+{
+  "name": "bauakte-5",
+  "version": "1.0.0",
+  "description": "Baufortschritts-Dokumentation \u2013 Cloudflare Webapp",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:css && wrangler dev",
+    "build": "npm run build:css",
+    "build:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --minify",
+    "deploy": "npm run build && wrangler deploy",
+    "types": "wrangler types",
+    "db:migrate": "wrangler d1 execute bauakte-5 --file=./migrations/0001_init.sql && wrangler d1 execute bauakte-5 --file=./migrations/0002_add_tags.sql",
+    "db:migrate:local": "wrangler d1 execute bauakte-5 --local --file=./migrations/0001_init.sql && wrangler d1 execute bauakte-5 --local --file=./migrations/0002_add_tags.sql"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260906.1",
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.129.0"
+  },
+  "dependencies": {
+    "hono": "^4.13.7"
+  }
+}
