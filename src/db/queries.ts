@@ -300,13 +300,20 @@ const PAGE_SIZE = 20;
 export async function getUploadsForPhasePaginated(
   db: D1Database,
   phaseId: string,
-  page: number = 1
+  page: number = 1,
+  tag?: string
 ): Promise<{ uploads: Upload[]; total: number; page: number; totalPages: number }> {
   const offset = (page - 1) * PAGE_SIZE;
-  const [uploadResult, countResult] = await db.batch([
-    db.prepare('SELECT * FROM uploads WHERE phase_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(phaseId, PAGE_SIZE, offset),
-    db.prepare('SELECT COUNT(*) as count FROM uploads WHERE phase_id = ?').bind(phaseId),
-  ]);
+  const tagClause = tag ? "AND (',' || tags || ',') LIKE '%,' || ? || ',%'" : '';
+  const uploadSql = 'SELECT * FROM uploads WHERE phase_id = ? ' + tagClause + ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  const countSql = 'SELECT COUNT(*) as count FROM uploads WHERE phase_id = ? ' + tagClause;
+  const uploadStmt = tag
+    ? db.prepare(uploadSql).bind(phaseId, tag, PAGE_SIZE, offset)
+    : db.prepare(uploadSql).bind(phaseId, PAGE_SIZE, offset);
+  const countStmt = tag
+    ? db.prepare(countSql).bind(phaseId, tag)
+    : db.prepare(countSql).bind(phaseId);
+  const [uploadResult, countResult] = await db.batch([uploadStmt, countStmt]);
   const uploads = (uploadResult as any).results as Upload[];
   const total = ((countResult as any).results?.[0]?.count as number) || 0;
   return {
@@ -315,6 +322,23 @@ export async function getUploadsForPhasePaginated(
     page,
     totalPages: Math.ceil(total / PAGE_SIZE),
   };
+}
+
+/** Get all unique tags used in a phase */
+export async function getPhaseTags(db: D1Database, phaseId: string): Promise<string[]> {
+  const rows = await db
+    .prepare("SELECT tags FROM uploads WHERE phase_id = ? AND tags IS NOT NULL AND tags != ''")
+    .bind(phaseId)
+    .all<{ tags: string }>()
+    .then(r => r.results);
+  const tagSet = new Set<string>();
+  for (const row of rows) {
+    for (const t of row.tags.split(',')) {
+      const trimmed = t.trim();
+      if (trimmed) tagSet.add(trimmed);
+    }
+  }
+  return [...tagSet].sort();
 }
 
 export async function countUploadsForPhase(db: D1Database, phaseId: string): Promise<number> {
@@ -350,6 +374,52 @@ export async function updateUploadTags(
     .bind(tags, uploadId)
     .run();
   return result.success;
+}
+
+// ===== Tag Aggregation =====
+export interface TagSummaryItem {
+  tag: string;
+  count: number;
+  phaseId: string;
+}
+
+/** Aggregate tags across all phases of a project (for project detail view) */
+export async function getProjectTagSummary(
+  db: D1Database,
+  projectId: string
+): Promise<TagSummaryItem[]> {
+  const rows = await db
+    .prepare(
+      `SELECT u.tags, u.phase_id FROM uploads u
+       JOIN phases ph ON ph.id = u.phase_id
+       WHERE ph.project_id = ? AND u.tags IS NOT NULL AND u.tags != ''`
+    )
+    .bind(projectId)
+    .all<{ tags: string; phase_id: string }>()
+    .then(r => r.results);
+
+  const tagMap = new Map<string, { count: number; phaseCounts: Map<string, number> }>();
+  for (const row of rows) {
+    for (const t of row.tags.split(',')) {
+      const trimmed = t.trim();
+      if (!trimmed) continue;
+      if (!tagMap.has(trimmed)) {
+        tagMap.set(trimmed, { count: 0, phaseCounts: new Map() });
+      }
+      const entry = tagMap.get(trimmed)!;
+      entry.count++;
+      entry.phaseCounts.set(row.phase_id, (entry.phaseCounts.get(row.phase_id) || 0) + 1);
+    }
+  }
+
+  return [...tagMap.entries()]
+    .map(([tag, data]) => ({
+      tag,
+      count: data.count,
+      phaseId: [...data.phaseCounts.entries()].sort((a, b) => b[1] - a[1])[0][0],
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 }
 
 // ===== Share Links =====

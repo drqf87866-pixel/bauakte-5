@@ -10,6 +10,7 @@ import {
   getUploadsForProject,
   deleteProjectCascade,
   addCollaborator,
+  getProjectTagSummary,
 } from '../db/queries';
 import { deleteFile } from '../lib/r2';
 import { validateProjectInput } from '../lib/validators';
@@ -71,8 +72,9 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
     const collab = await addCollaborator(c.env.DB, projectId, user.id); // will no-op if already collaborator
   }
   const phases = await getPhasesForProject(c.env.DB, projectId);
+  const tagSummary = await getProjectTagSummary(c.env.DB, projectId);
   return c.html(
-    <ProjectDetailPage user={user} project={project} phases={phases} ok={c.req.query('ok')} />
+    <ProjectDetailPage user={user} project={project} phases={phases} tagSummary={tagSummary} ok={c.req.query('ok')} />
   );
 });
 

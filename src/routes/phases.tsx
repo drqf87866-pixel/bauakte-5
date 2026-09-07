@@ -5,6 +5,7 @@ import {
   getPhaseById,
   getPhasesForProject,
   getUploadsForPhasePaginated,
+  getPhaseTags,
   completePhase,
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
@@ -22,7 +23,9 @@ phaseRoutes.get('/:projectId/phases/:phaseId', requireAuth, async (c) => {
   if (!phase || phase.project_id !== projectId) return c.notFound();
   const allPhases = await getPhasesForProject(c.env.DB, projectId);
   const page = parseInt(c.req.query('page') || '1', 10);
-  const { uploads, total, totalPages } = await getUploadsForPhasePaginated(c.env.DB, phaseId, page);
+  const activeTag = c.req.query('tag') || undefined;
+  const { uploads, total, totalPages } = await getUploadsForPhasePaginated(c.env.DB, phaseId, page, activeTag);
+  const allTags = await getPhaseTags(c.env.DB, phaseId);
   return c.html(
     <PhaseDetailPage
       user={user}
@@ -33,6 +36,8 @@ phaseRoutes.get('/:projectId/phases/:phaseId', requireAuth, async (c) => {
       uploadTotal={total}
       uploadPage={page}
       uploadTotalPages={totalPages}
+      allTags={allTags}
+      activeTag={activeTag}
       error={c.req.query('error')}
       ok={c.req.query('ok')}
     />
