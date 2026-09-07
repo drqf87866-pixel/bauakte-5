@@ -180,65 +180,6 @@ export interface ProjectStats {
 }
 export type ProjectStatsMap = Record<string, ProjectStats>;
 
-export interface ProjectPhaseOverview {
-  project: Project;
-  phases: Phase[];
-  mediaCounts: Record<string, number>;
-  progress: { total: number; completed: number };
-}
-
-export async function getProjectsWithPhaseOverview(
-  db: D1Database,
-  userId: string
-): Promise<ProjectPhaseOverview[]> {
-  const projects = await getProjectsForUser(db, userId);
-  if (projects.length === 0) return [];
-
-  const projectIds = projects.map(p => p.id);
-  const phasesByProject = await getPhasesForProjects(db, projectIds);
-  const counts = await getMediaCountsForProjects(db, projectIds);
-
-  return projects.map(project => {
-    const phases = phasesByProject.get(project.id) || [];
-    const phaseIds = phases.map(p => p.id);
-    const mediaCounts: Record<string, number> = {};
-    for (const id of phaseIds) mediaCounts[id] = 0;
-    for (const row of counts) {
-      if (mediaCounts[row.phase_id] !== undefined) {
-        mediaCounts[row.phase_id] = row.count;
-      }
-    }
-    return {
-      project,
-      phases,
-      mediaCounts,
-      progress: {
-        total: phases.length,
-        completed: phases.filter(p => p.status === 'completed').length,
-      },
-    };
-  });
-}
-
-async function getMediaCountsForProjects(
-  db: D1Database,
-  projectIds: string[]
-): Promise<{ phase_id: string; count: number }[]> {
-  if (projectIds.length === 0) return [];
-  const placeholders = projectIds.map(() => '?').join(',');
-  return db
-    .prepare(
-      `SELECT ph.id as phase_id, COUNT(u.id) as count
-       FROM phases ph
-       LEFT JOIN uploads u ON u.phase_id = ph.id
-       WHERE ph.project_id IN (${placeholders})
-       GROUP BY ph.id`
-    )
-    .bind(...projectIds)
-    .all<{ phase_id: string; count: number }>()
-    .then(r => r.results);
-}
-
 export async function getProjectStats(db: D1Database, userId: string): Promise<ProjectStatsMap> {
   const phaseRows = await db
     .prepare(

@@ -35,7 +35,6 @@ export function DesktopNav({ user, active }: DesktopNavProps) {
           <a href='/' class='text-xl font-bold text-slate-900 no-underline'>Bauakte</a>
           <div class='flex items-center gap-1 ml-4'>
             <NavLink href='/projects' label='Projekte' active={active === 'projects'} />
-            <NavLink href='/phases' label='Phasen' active={active === 'phases'} />
             <NavLink href='/upload-quick' label='Schnell-Upload' active={active === 'upload-quick'} quickUpload />
           </div>
         </div>

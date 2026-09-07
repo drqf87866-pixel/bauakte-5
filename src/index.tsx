@@ -6,7 +6,6 @@ import { authMiddleware } from './auth/middleware';
 import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import phaseRoutes from './routes/phases';
-import phaseOverviewRoutes from './routes/phases-overview';
 import documentsRoutes from './routes/project-documents';
 import uploadRoutes from './routes/uploads';
 import shareRoutes from './routes/share';
@@ -67,7 +66,6 @@ app.route('/projects', phaseRoutes);
 app.route('/projects', documentsRoutes);
 app.route('/projects', uploadRoutes);
 app.route('/projects', shareRoutes);
-app.route('/', phaseOverviewRoutes);
 app.route('/', uploadRoutes); // For /r2/:key
 app.route('/', shareRoutes); // For /share/:token
 app.route('/', quickUploadRoutes); // For /upload-quick
