@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { normalizeTag, formatTags, arrayBufferToBase64, analyzeImage } from './ai-tags';
+import { normalizeTag, formatTags, arrayBufferToBase64, analyzeImage, classifyAiError, runWithRetry, AiAnalysisError } from './ai-tags';
 
 describe('normalizeTag', () => {
   it('lowercases and trims whitespace', () => {
@@ -154,5 +154,86 @@ describe('analyzeImage', () => {
       'Bild konnte nicht für die KI-Analyse aufbereitet werden'
     );
     expect(env.AI.run).not.toHaveBeenCalled();
+  });
+});
+
+describe('classifyAiError', () => {
+  it('returns rate_limited for 429 errors', () => {
+    expect(classifyAiError({ status: 429 })).toBe('rate_limited');
+    expect(classifyAiError(new Error('429 too many requests'))).toBe('rate_limited');
+    expect(classifyAiError(new Error('rate limit exceeded'))).toBe('rate_limited');
+  });
+
+  it('returns capacity for 3040 errors', () => {
+    expect(classifyAiError({ status: 3040 })).toBe('capacity');
+    expect(classifyAiError(new Error('3040 out of capacity'))).toBe('capacity');
+    expect(classifyAiError(new Error('no more data centers to forward'))).toBe('capacity');
+  });
+
+  it('returns model_unavailable for 5035 errors', () => {
+    expect(classifyAiError({ status: 5035 })).toBe('model_unavailable');
+    expect(classifyAiError(new Error('5035 requires workers paid'))).toBe('model_unavailable');
+    expect(classifyAiError(new Error('model not available'))).toBe('model_unavailable');
+  });
+
+  it('returns unknown for other errors', () => {
+    expect(classifyAiError(new Error('something went wrong'))).toBe('unknown');
+    expect(classifyAiError(new Error(''))).toBe('unknown');
+  });
+});
+
+describe('runWithRetry', () => {
+  it('returns result on first attempt if successful', async () => {
+    const fn = vi.fn(async () => 'ok');
+    const result = await runWithRetry(fn, 2);
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries on rate_limited error (429)', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce({ status: 429 })
+      .mockResolvedValueOnce('ok');
+    const result = await runWithRetry(fn, 2);
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on capacity error (3040)', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new Error('3040 out of capacity'))
+      .mockResolvedValueOnce('ok');
+    const result = await runWithRetry(fn, 2);
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('does NOT retry on model_unavailable (5035)', async () => {
+    const fn = vi.fn().mockRejectedValue({ status: 5035 });
+    await expect(runWithRetry(fn, 2)).rejects.toThrow(AiAnalysisError);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT retry on unknown errors', async () => {
+    const fn = vi.fn().mockRejectedValue(new Error('random failure'));
+    await expect(runWithRetry(fn, 2)).rejects.toThrow(AiAnalysisError);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('exhausts retries then throws AiAnalysisError', async () => {
+    const fn = vi.fn().mockRejectedValue({ status: 429 });
+    await expect(runWithRetry(fn, 2)).rejects.toThrow(AiAnalysisError);
+    expect(fn).toHaveBeenCalledTimes(3); // initial + 2 retries
+  });
+
+  it('returns AiAnalysisError with correct errorType', async () => {
+    const fn = vi.fn().mockRejectedValue({ status: 429 });
+    try {
+      await runWithRetry(fn, 0);
+      expect.fail('should have thrown');
+    } catch (err) {
+      expect(err).toBeInstanceOf(AiAnalysisError);
+      expect((err as AiAnalysisError).errorType).toBe('rate_limited');
+    }
   });
 });

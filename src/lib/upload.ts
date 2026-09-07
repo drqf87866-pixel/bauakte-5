@@ -1,7 +1,7 @@
 import type { Env, Upload } from '../db/schema';
 import { createUpload, getUploadById, updateUploadAiResult, updateUploadTags } from '../db/queries';
 import { uploadFile } from './r2';
-import { analyzeImage, formatTags, MAX_AI_IMAGE_BYTES } from './ai-tags';
+import { analyzeImage, formatTags, MAX_AI_IMAGE_BYTES, runWithRetry } from './ai-tags';
 
 export interface UploadResult {
   uploadId: string;
@@ -51,10 +51,9 @@ export async function runAiTagging(
       return;
     }
 
-    const result = await analyzeImage(
-      env,
-      object.body,
-      target.mimeType
+    const result = await runWithRetry(
+      () => analyzeImage(env, object.body, target.mimeType),
+      2
     );
 
     if (!result) {

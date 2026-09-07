@@ -15,6 +15,68 @@ export type AiTagResult = {
   description: string;
 };
 
+export type AiErrorType = 'rate_limited' | 'capacity' | 'model_unavailable' | 'unknown';
+
+export class AiAnalysisError extends Error {
+  constructor(
+    message: string,
+    public errorType: AiErrorType
+  ) {
+    super(message);
+    this.name = 'AiAnalysisError';
+  }
+}
+
+/**
+ * Classifies an error from the AI service into specific categories.
+ * Helps the UI show appropriate messages and decide retry behavior.
+ */
+export function classifyAiError(err: unknown): AiErrorType {
+  const msg = String(err).toLowerCase();
+  const errObj = err as Record<string, unknown> | null;
+  const status = typeof errObj?.status === 'number' ? errObj.status : undefined;
+
+  if (status === 429 || msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) {
+    return 'rate_limited';
+  }
+  if (status === 3040 || msg.includes('3040') || msg.includes('out of capacity') || msg.includes('no more data centers')) {
+    return 'capacity';
+  }
+  if (status === 5035 || msg.includes('5035') || msg.includes('requires workers paid') || msg.includes('model not available')) {
+    return 'model_unavailable';
+  }
+  return 'unknown';
+}
+
+/**
+ * Runs an async function with exponential backoff retry.
+ * Only retries on transient errors (rate limits, capacity issues).
+ */
+export async function runWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const errorType = classifyAiError(err);
+      const isRetryable = errorType === 'rate_limited' || errorType === 'capacity';
+      if (!isRetryable || attempt === maxRetries) {
+        throw new AiAnalysisError(
+          String(err).slice(0, 300),
+          errorType
+        );
+      }
+      // Exponential backoff: 1s, 2s, 4s...
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+  throw lastErr;
+}
+
 type AnalyzeImageEnv = {
   AI: Ai;
   IMAGES: ImagesBinding;

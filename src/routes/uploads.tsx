@@ -184,7 +184,7 @@ uploadRoutes.post('/projects/:projectId/batch-retag', requireAuth, async (c) => 
     return c.text('Forbidden', 403);
   }
 
-  const pending = await getPendingUploadsForProject(c.env.DB, projectId, 20);
+  const pending = await getPendingUploadsForProject(c.env.DB, projectId, 5);
 
   if (pending.length > 0) {
     // Analyse im Hintergrund ausführen – der Request antwortet sofort.
