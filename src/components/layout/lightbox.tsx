@@ -6,7 +6,6 @@
  */
 export function Lightbox() {
   return (
-    {/* JS toggles hidden <-> flex (see layout.tsx) so the centering utilities only apply while visible */}
     <div id='lightbox' class='fixed inset-0 z-[90] hidden bg-black/90 items-center justify-center' aria-hidden='true' role='dialog' aria-modal='true' aria-label='Bildansicht'>
       <button type='button' data-lightbox-close aria-label='Schließen'
         class='absolute top-3 right-3 sm:top-5 sm:right-5 z-10 p-2.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition cursor-pointer border-0'>
