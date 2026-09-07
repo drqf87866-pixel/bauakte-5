@@ -29,11 +29,19 @@ Thumbs.db
 
 # IDE
 .idea/
+.vscode/
 *.sublime-project
 *.sublime-workspace
 
 # Testing
 coverage/
+
+# Local docs / AI planning (not public)
+AGENTS.md
+ROADMAP.md
+CLAUDE.md
+feat-plan.md
+optimierung.md
 
 # Misc
 cookies.txt
