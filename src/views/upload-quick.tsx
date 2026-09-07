@@ -1,4 +1,3 @@
-﻿import { jsx } from 'hono/jsx';
 import { Layout, Flash } from './layout';
 import type { User, Project, Phase } from '../db/schema';
 import { SelectField, InputField, FileInputField } from '../components/ui/input';

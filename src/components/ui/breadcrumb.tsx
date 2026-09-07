@@ -1,4 +1,4 @@
-import { jsx, Fragment } from 'hono/jsx';
+import { Fragment } from 'hono/jsx';
 
 interface BreadcrumbItem {
   label: string;

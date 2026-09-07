@@ -38,8 +38,9 @@ function runMigrations(d1: D1Adapter): void {
     try {
       d1.exec(sql);
       console.log('[local-dev] Migration executed successfully');
-    } catch (err: any) {
-      console.error(`[local-dev] Migration failed: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[local-dev] Migration failed: ${msg}`);
       throw err;
     }
   }
@@ -89,7 +90,7 @@ class LocalR2Bucket {
       const data = fs.readFileSync(p);
       const stat = fs.statSync(p);
       const obj = new R2ObjectStub(key, stat.size) as unknown as R2ObjectBody;
-      (obj as any).body = data;
+      Object.defineProperty(obj, 'body', { value: data, writable: false });
       return obj;
     } catch {
       return null;
@@ -139,14 +140,14 @@ class LocalR2Bucket {
 
 // ── AI stub ───────────────────────────────────────────────────────────
 class LocalAI {
-  async run(_model: string, _inputs: any, _options?: any): Promise<any> {
+  async run(_model: string, _inputs: unknown, _options?: unknown): Promise<unknown> {
     console.warn('[AI] stub – no real AI available locally');
     return null;
   }
-  async embedding?(_model: string, _inputs: any): Promise<any> {
+  async embedding?(_model: string, _inputs: unknown): Promise<{ data: unknown[] }> {
     return { data: [] };
   }
-  async textClassification?(_model: string, _inputs: any): Promise<any> {
+  async textClassification?(_model: string, _inputs: unknown): Promise<unknown[]> {
     return [];
   }
 }
@@ -175,10 +176,12 @@ export function getEnv(): Env {
 // ── Serve the app directly (call this from the dev server entry) ──────
 let server: ServerType | null = null;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function startDevServer(app: Hono<any>, port: number = 3000): Promise<ServerType> {
   const env = getEnv();
 
   // Wrap the app dispatch so every request gets the local env injected
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const wrapped = new Hono<any>();
 
   wrapped.use('*', async (c, next) => {
@@ -211,6 +214,7 @@ export async function startDevServer(app: Hono<any>, port: number = 3000): Promi
     await next();
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   wrapped.route('/', app as any);
 
   // Also inject env into the original app on each request

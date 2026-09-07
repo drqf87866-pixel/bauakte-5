@@ -1,5 +1,3 @@
-import { jsx } from 'hono/jsx';
-
 interface ProgressBarProps {
   value: number;
   max?: number;

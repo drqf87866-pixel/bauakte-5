@@ -1,5 +1,4 @@
 ﻿import { Context, Next } from 'hono';
-import { getCookie } from 'hono/cookie';
 import type { Env, User } from '../db/schema';
 import { getCurrentUser } from '../lib/auth';
 

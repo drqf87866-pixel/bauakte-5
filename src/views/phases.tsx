@@ -1,4 +1,3 @@
-import { jsx } from 'hono/jsx';
 import { Layout, Flash } from './layout';
 import type { User, Project, Phase, Upload } from '../db/schema';
 import { Breadcrumb } from '../components/ui/breadcrumb';

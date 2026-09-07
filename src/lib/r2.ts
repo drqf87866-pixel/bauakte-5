@@ -1,5 +1,3 @@
-import type { Env } from '../db/schema';
-
 // Upload a file to R2 and return the key
 export async function uploadFile(
   r2: R2Bucket,

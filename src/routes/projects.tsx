@@ -9,12 +9,12 @@ import {
   getPhasesForProject,
   getUploadsForProject,
   deleteProjectCascade,
-  addCollaborator,
   getProjectTagSummary,
 } from '../db/queries';
 import { deleteFile } from '../lib/r2';
 import { validateProjectInput } from '../lib/validators';
 import { requireAuth } from '../auth/middleware';
+import { canAccessProject } from '../lib/auth';
 import { PHASE_NAMES } from '../db/schema';
 import { DashboardPage, ProjectDetailPage, NewProjectPage } from '../views/projects';
 
@@ -67,9 +67,9 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
   if (!project) {
     return c.notFound();
   }
-  // Check access
-  if (project.owner_id !== user.id) {
-    const collab = await addCollaborator(c.env.DB, projectId, user.id); // will no-op if already collaborator
+  // Check access: must be owner or collaborator
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
   }
   const phases = await getPhasesForProject(c.env.DB, projectId);
   const tagSummary = await getProjectTagSummary(c.env.DB, projectId);

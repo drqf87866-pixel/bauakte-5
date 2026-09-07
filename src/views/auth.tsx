@@ -1,4 +1,3 @@
-import { jsx } from 'hono/jsx';
 import { Layout, Flash } from './layout';
 import { Alert } from '../components/ui/alert';
 import { InputField } from '../components/ui/input';

@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
-import type { Env, User } from '../db/schema';
-import { getProjectsForUser as getProjectsByUser, getPhasesForProject } from '../db/queries';
+import type { Env, User, Phase } from '../db/schema';
+import { getProjectsForUser as getProjectsByUser, getPhasesForProjects, getProjectById, getPhaseById } from '../db/queries';
 import { handleUpload } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
+import { canAccessProject } from '../lib/auth';
 import { QuickUploadPage } from '../views/upload-quick';
 
 const quickUploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
@@ -11,9 +12,11 @@ const quickUploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | nu
 quickUploadRoutes.get('/upload-quick', requireAuth, async (c) => {
   const user = c.get('user')!;
   const projects = await getProjectsByUser(c.env.DB, user.id);
-  const phasesByProject: Record<string, any[]> = {};
+  const projectIds = projects.map(p => p.id);
+  const phasesMap = await getPhasesForProjects(c.env.DB, projectIds);
+  const phasesByProject: Record<string, Phase[]> = {};
   for (const project of projects) {
-    phasesByProject[project.id] = await getPhasesForProject(c.env.DB, project.id);
+    phasesByProject[project.id] = phasesMap.get(project.id) ?? [];
   }
   return c.html(<QuickUploadPage user={user} projects={projects} phasesByProject={phasesByProject} error={c.req.query('error')} />);
 });
@@ -31,8 +34,18 @@ quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
     return c.redirect('/upload-quick?error=missing-fields');
   }
 
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
+  const phase = await getPhaseById(c.env.DB, phaseId);
+  if (!phase || phase.project_id !== projectId) {
+    return c.redirect('/upload-quick?error=upload-failed');
+  }
+
   try {
-    await handleUpload(c.env, file, phaseId, user.id, notes);
+    await handleUpload(c.env, file, phaseId, user.id, notes, c.executionCtx);
   } catch (err) {
     console.error('Quick upload failed', err);
     return c.redirect('/upload-quick?error=upload-failed');

@@ -9,7 +9,6 @@ import phaseRoutes from './routes/phases';
 import uploadRoutes from './routes/uploads';
 import shareRoutes from './routes/share';
 import quickUploadRoutes from './routes/upload-quick';
-import { getCurrentUser } from './lib/auth';
 import { NotFoundPage } from './views/not-found';
 
 // Extend Hono context type

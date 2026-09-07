@@ -1,7 +1,7 @@
 ﻿import { Hono } from 'hono';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import type { Env, User } from '../db/schema';
-import { createUser, getUserByEmail, getUserById, getUserWithPassword, updateUserPassword, deleteUserSessions } from '../db/queries';
+import { createUser, getUserByEmail, getUserWithPassword, updateUserPassword, deleteUserSessions } from '../db/queries';
 import { hashPassword, verifyPassword, createUserSession, destroySession } from '../lib/auth';
 import { validateRegistrationInput, validateLoginInput, validatePasswordChangeInput } from '../lib/validators';
 import { LoginPage, RegisterPage, PasswordChangePage } from '../views/auth';

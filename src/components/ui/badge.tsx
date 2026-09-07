@@ -1,10 +1,10 @@
-import { jsx } from 'hono/jsx';
+import type { Child } from 'hono/jsx';
 
 type BadgeVariant = 'success' | 'progress' | 'default' | 'tag';
 
 interface BadgeProps {
   variant: BadgeVariant;
-  children: any;
+  children: Child;
   class?: string;
 }
 

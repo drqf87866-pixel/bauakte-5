@@ -1,9 +1,9 @@
-import { jsx } from 'hono/jsx';
+import type { Child } from 'hono/jsx';
 
 interface CardProps {
-  children: any;
+  children: Child;
   class?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export function Card({ children, class: extraClass = '', ...props }: CardProps) {

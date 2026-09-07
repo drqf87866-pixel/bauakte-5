@@ -1,4 +1,3 @@
-import { jsx } from 'hono/jsx';
 import type { User } from '../../db/schema';
 import { UserAvatar } from './avatar';
 

@@ -1,6 +1,4 @@
-﻿import type { Env } from '../db/schema';
-
-// Tags, die für Bauprojekte relevant sind
+﻿// Tags, die für Bauprojekte relevant sind
 const CONSTRUCTION_KEYWORDS = [
   'Rohbau', 'Mauerwerk', 'Beton', 'Stahl', 'Gerüst', 'Schalung', 'Bewehrung',
   'Dach', 'Dachziegel', 'Dachstuhl', 'Fassade', 'Dämmung', 'Fenster', 'Tür',
@@ -57,7 +55,7 @@ Beachte: Das Foto zeigt Bauarbeiten oder Baufortschritt.`,
 
     // Antwort parsen – sie kann als { response: string } oder direkt als Text kommen
     const rawText = typeof response === 'object' && response !== null && 'response' in response
-      ? (response as any).response
+      ? (response as { response: string }).response
       : String(response);
 
     return parseAiResponse(rawText);

@@ -1,4 +1,4 @@
-import { jsx } from 'hono/jsx';
+import type { Child } from 'hono/jsx';
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'danger-outline' | 'ghost' | 'success';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -8,9 +8,9 @@ interface ButtonProps {
   size?: ButtonSize;
   loading?: boolean;
   href?: string;
-  children: any;
+  children: Child;
   class?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const variantClasses: Record<ButtonVariant, string> = {

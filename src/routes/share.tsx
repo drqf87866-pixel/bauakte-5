@@ -5,6 +5,7 @@ import {
   getShareLinksForProject,
   createShareLink,
   getShareLinkByToken,
+  getShareLinkById,
   deactivateShareLink,
   addCollaborator,
 } from '../db/queries';
@@ -13,12 +14,15 @@ import { SharePage } from '../views/share';
 
 const shareRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
-// Share management page
+// Share management page (owner only - exposes share tokens)
 shareRoutes.get('/:projectId/share', requireAuth, async (c) => {
   const user = c.get('user')!;
   const projectId = c.req.param('projectId')!;
   const project = await getProjectById(c.env.DB, projectId);
   if (!project) return c.notFound();
+  if (project.owner_id !== user.id) {
+    return c.text('Forbidden', 403);
+  }
   const shareLinks = await getShareLinksForProject(c.env.DB, projectId);
   const baseUrl = new URL(c.req.url).origin;
   return c.html(
@@ -41,10 +45,19 @@ shareRoutes.post('/:projectId/share/create', requireAuth, async (c) => {
   return c.redirect(`/projects/${projectId}/share?ok=link-created`);
 });
 
-// Deactivate share link
+// Deactivate share link (owner only)
 shareRoutes.post('/share/:linkId/deactivate', requireAuth, async (c) => {
-  const user = c.get('user')!;
+  const _user = c.get('user')!;
   const linkId = c.req.param('linkId')!;
+
+  const shareLink = await getShareLinkById(c.env.DB, linkId);
+  if (!shareLink) return c.notFound();
+
+  const project = await getProjectById(c.env.DB, shareLink.project_id);
+  if (!project || project.owner_id !== _user.id) {
+    return c.text('Forbidden', 403);
+  }
+
   await deactivateShareLink(c.env.DB, linkId);
   const referer = c.req.header('Referer') || '/';
   return c.redirect(referer);

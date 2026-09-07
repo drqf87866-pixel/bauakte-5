@@ -1,4 +1,3 @@
-import { jsx } from 'hono/jsx';
 import type { User } from '../db/schema';
 import { Alert } from '../components/ui/alert';
 import { DesktopNav } from '../components/layout/nav-desktop';
@@ -38,7 +37,7 @@ export function Layout({
   user?: User | null;
   title?: string;
   active?: NavActive;
-  children: any;
+  children: import('hono/jsx').Child;
 }) {
   return (
     <html lang='de'>

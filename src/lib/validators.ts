@@ -14,7 +14,7 @@ export function validateRequired(value: string, fieldName: string): string | nul
   return null;
 }
 
-export function validateProjectInput(name: string, address: string): ValidationResult {
+export function validateProjectInput(name: string, _address: string): ValidationResult {
   const errors: Record<string, string> = {};
   const nameErr = validateRequired(name, 'Projektname');
   if (nameErr) errors.name = nameErr;

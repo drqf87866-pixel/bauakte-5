@@ -1,4 +1,4 @@
-﻿import type { Env, User, Session, Project, Phase, Upload, ShareLink } from './schema';
+﻿import type { User, Session, Project, Phase, Upload, ShareLink } from './schema';
 
 // ===== Users =====
 export async function createUser(
@@ -250,6 +250,31 @@ export async function getPhasesForProject(db: D1Database, projectId: string): Pr
     .then(r => r.results);
 }
 
+export async function getPhasesForProjects(
+  db: D1Database,
+  projectIds: string[]
+): Promise<Map<string, Phase[]>> {
+  const result = new Map<string, Phase[]>();
+  if (projectIds.length === 0) return result;
+
+  const placeholders = projectIds.map(() => '?').join(',');
+  const rows = await db
+    .prepare(`SELECT * FROM phases WHERE project_id IN (${placeholders}) ORDER BY project_id, sort_order`)
+    .bind(...projectIds)
+    .all<Phase>()
+    .then(r => r.results);
+
+  for (const phase of rows) {
+    const list = result.get(phase.project_id);
+    if (list) {
+      list.push(phase);
+    } else {
+      result.set(phase.project_id, [phase]);
+    }
+  }
+  return result;
+}
+
 export async function getPhaseById(db: D1Database, phaseId: string): Promise<Phase | null> {
   return db
     .prepare('SELECT * FROM phases WHERE id = ?')
@@ -314,8 +339,8 @@ export async function getUploadsForPhasePaginated(
     ? db.prepare(countSql).bind(phaseId, tag)
     : db.prepare(countSql).bind(phaseId);
   const [uploadResult, countResult] = await db.batch([uploadStmt, countStmt]);
-  const uploads = (uploadResult as any).results as Upload[];
-  const total = ((countResult as any).results?.[0]?.count as number) || 0;
+  const uploads = (uploadResult as { results: Upload[] }).results;
+  const total = ((countResult as { results?: { count: number }[] }).results?.[0]?.count) || 0;
   return {
     uploads,
     total,
@@ -455,6 +480,16 @@ export async function getShareLinkByToken(
   return db
     .prepare('SELECT * FROM share_links WHERE token = ? AND is_active = 1')
     .bind(token)
+    .first<ShareLink>();
+}
+
+export async function getShareLinkById(
+  db: D1Database,
+  linkId: string
+): Promise<ShareLink | null> {
+  return db
+    .prepare('SELECT * FROM share_links WHERE id = ?')
+    .bind(linkId)
     .first<ShareLink>();
 }
 

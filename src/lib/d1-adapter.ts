@@ -36,8 +36,9 @@ export class D1PreparedStatement {
       const stmt = this.db.prepare(this.sql);
       const row = stmt.get(...this.params) as T | undefined;
       return Promise.resolve(row ?? null);
-    } catch (err: any) {
-      console.error(`[D1] first() error on "${this.sql.slice(0, 60)}…": ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[D1] first() error on "${this.sql.slice(0, 60)}…": ${msg}`);
       return Promise.resolve(null);
     }
   }
@@ -47,8 +48,9 @@ export class D1PreparedStatement {
       const stmt = this.db.prepare(this.sql);
       const rows = stmt.all(...this.params) as T[];
       return Promise.resolve({ success: true, results: rows });
-    } catch (err: any) {
-      console.error(`[D1] all() error on "${this.sql.slice(0, 60)}…": ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[D1] all() error on "${this.sql.slice(0, 60)}…": ${msg}`);
       return Promise.resolve({ success: false, results: [] });
     }
   }
@@ -58,8 +60,9 @@ export class D1PreparedStatement {
       const stmt = this.db.prepare(this.sql);
       const info = stmt.run(...this.params);
       return Promise.resolve({ success: true, meta: { changes: info.changes } });
-    } catch (err: any) {
-      console.error(`[D1] run() error on "${this.sql.slice(0, 60)}…": ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[D1] run() error on "${this.sql.slice(0, 60)}…": ${msg}`);
       return Promise.resolve({ success: false, meta: { changes: 0 } });
     }
   }
@@ -69,8 +72,9 @@ export class D1PreparedStatement {
       const stmt = this.db.prepare(this.sql);
       const rows = stmt.raw().all(...this.params) as unknown[][];
       return Promise.resolve(rows);
-    } catch (err: any) {
-      console.error(`[D1] raw() error on "${this.sql.slice(0, 60)}…": ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[D1] raw() error on "${this.sql.slice(0, 60)}…": ${msg}`);
       return Promise.resolve([]);
     }
   }
@@ -103,8 +107,9 @@ export class D1Adapter {
           const s = this.db.prepare(stmt['sql']);
           const info = s.run(...stmt['params']);
           return { success: true, meta: { changes: info.changes } };
-        } catch (err: any) {
-          console.error(`[D1] batch error: ${err.message}`);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[D1] batch error: ${msg}`);
           return { success: false, meta: { changes: 0 } };
         }
       });
@@ -116,8 +121,9 @@ export class D1Adapter {
     try {
       this.db.exec(sql);
       return { count: 0, duration: 0 };
-    } catch (err: any) {
-      console.error(`[D1] exec() error: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[D1] exec() error: ${msg}`);
       return { count: 0, duration: 0 };
     }
   }

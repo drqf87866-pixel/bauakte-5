@@ -9,6 +9,7 @@ import {
   completePhase,
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
+import { canAccessProject } from '../lib/auth';
 import { PhaseDetailPage } from '../views/phases';
 
 const phaseRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
@@ -19,6 +20,9 @@ phaseRoutes.get('/:projectId/phases/:phaseId', requireAuth, async (c) => {
   const { projectId, phaseId } = c.req.param() as { projectId: string; phaseId: string };
   const project = await getProjectById(c.env.DB, projectId);
   if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
   const phase = await getPhaseById(c.env.DB, phaseId);
   if (!phase || phase.project_id !== projectId) return c.notFound();
   const allPhases = await getPhasesForProject(c.env.DB, projectId);
@@ -50,6 +54,9 @@ phaseRoutes.post('/:projectId/phases/:phaseId/complete', requireAuth, async (c) 
   const { projectId, phaseId } = c.req.param() as { projectId: string; phaseId: string };
   const project = await getProjectById(c.env.DB, projectId);
   if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
   const phase = await getPhaseById(c.env.DB, phaseId);
   if (!phase || phase.project_id !== projectId) return c.notFound();
   await completePhase(c.env.DB, phaseId);

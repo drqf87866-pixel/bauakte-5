@@ -12,6 +12,10 @@ export interface UploadResult {
 /**
  * Uploads a file, creates a DB record, and triggers AI auto-tagging for images.
  * Shared between phase upload and quick upload routes.
+ *
+ * @param ctx - Optional ExecutionContext for background AI tagging via waitUntil.
+ *              When provided, AI analysis runs after the HTTP response is sent.
+ *              When omitted (e.g. in tests), AI tagging is skipped.
  */
 export async function handleUpload(
   env: Pick<Env, 'DB' | 'R2' | 'AI'>,
@@ -19,6 +23,7 @@ export async function handleUpload(
   phaseId: string,
   userId: string,
   notes: string,
+  ctx?: { waitUntil(promise: Promise<unknown>): void },
 ): Promise<UploadResult> {
   const uploadId = crypto.randomUUID();
   const { key, type } = await uploadFile(env.R2, file, phaseId, uploadId);
@@ -36,21 +41,25 @@ export async function handleUpload(
     notes,
   );
 
-  // AI auto-tagging for images (error-tolerant)
-  if (type === 'image') {
-    try {
-      const object = await env.R2.get(key);
-      if (object) {
-        const imageBuffer = await object.arrayBuffer();
-        const result = await analyzeImage(env.AI, imageBuffer, file.type);
-        if (result && result.tags.length > 0) {
-          const tagsStr = formatTags(result.tags);
-          await updateUploadTags(env.DB, uploadId, tagsStr);
+  // AI auto-tagging for images — runs asynchronously after response
+  if (type === 'image' && ctx) {
+    ctx.waitUntil(
+      (async () => {
+        try {
+          const object = await env.R2.get(key);
+          if (object) {
+            const imageBuffer = await object.arrayBuffer();
+            const result = await analyzeImage(env.AI, imageBuffer, file.type);
+            if (result && result.tags.length > 0) {
+              const tagsStr = formatTags(result.tags);
+              await updateUploadTags(env.DB, uploadId, tagsStr);
+            }
+          }
+        } catch (tagErr) {
+          console.error('Auto-tagging failed for upload', uploadId, tagErr);
         }
-      }
-    } catch (tagErr) {
-      console.error('Auto-tagging failed for upload', uploadId, tagErr);
-    }
+      })(),
+    );
   }
 
   return { uploadId, key, type };

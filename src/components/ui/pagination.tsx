@@ -1,5 +1,3 @@
-import { jsx } from 'hono/jsx';
-
 interface PaginationProps {
   currentPage: number;
   totalPages: number;

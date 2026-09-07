@@ -1,4 +1,3 @@
-import { jsx } from 'hono/jsx';
 import { Layout } from './layout';
 import type { User } from '../db/schema';
 import { Button } from '../components/ui/button';

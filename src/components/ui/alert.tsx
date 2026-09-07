@@ -1,10 +1,10 @@
-import { jsx } from 'hono/jsx';
+import type { Child } from 'hono/jsx';
 
 type AlertType = 'error' | 'success' | 'warning';
 
 interface AlertProps {
   type: AlertType;
-  children: any;
+  children: Child;
   class?: string;
 }
 
@@ -14,7 +14,7 @@ const classMap: Record<AlertType, string> = {
   warning: 'alert-warning',
 };
 
-const icons: Record<AlertType, any> = {
+const icons: Record<AlertType, Child> = {
   error: (
     <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>
       <circle cx='12' cy='12' r='10'/><line x1='15' y1='9' x2='9' y2='15'/><line x1='9' y1='9' x2='15' y2='15'/>

@@ -1,5 +1,3 @@
-import { jsx } from 'hono/jsx';
-
 const AVATAR_PALETTE = [
   { bg: 'bg-amber-500', text: 'text-white' },
   { bg: 'bg-slate-600', text: 'text-white' },

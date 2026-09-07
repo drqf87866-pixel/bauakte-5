@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createUser,
   getUserByEmail,
@@ -10,20 +10,20 @@ import {
 
 // Create a mock D1Database
 function createMockDb(): D1Database {
-  const store = new Map<string, any[]>();
+  const store = new Map<string, unknown[]>();
   return {
     prepare: vi.fn((sql: string) => {
       const stmt = {
-        bind: vi.fn((...args: any[]) => ({
+        bind: vi.fn((...args: unknown[]) => ({
           ...stmt,
           boundArgs: args,
           run: vi.fn(async () => ({ success: true, meta: {} })),
-          first: vi.fn(async <T = any>(): Promise<T | null> => {
+          first: vi.fn(async <T = unknown>(): Promise<T | null> => {
             const table = sql.match(/FROM\s+(\w+)/i)?.[1] || '';
             const rows = store.get(table) || [];
             return (rows[0] as T) ?? null;
           }),
-          all: vi.fn(async <T = any>() => {
+          all: vi.fn(async <T = unknown>() => {
             const table = sql.match(/FROM\s+(\w+)/i)?.[1] || '';
             const rows = store.get(table) || [];
             return { results: rows as T[], success: true };
@@ -32,7 +32,7 @@ function createMockDb(): D1Database {
       };
       return stmt;
     }),
-    batch: vi.fn(async (statements: any[]) => {
+    batch: vi.fn(async (statements: unknown[]) => {
       return statements.map(() => ({ success: true, meta: {} }));
     }),
     exec: vi.fn(),

@@ -1,6 +1,5 @@
-﻿import { createSession, deleteSession, getSession, getUserById } from '../db/queries';
-import type { Env, User } from '../db/schema';
-import { Context } from 'hono';
+﻿import { createSession, deleteSession, getSession, getUserById, isCollaborator } from '../db/queries';
+import type { Project, User } from '../db/schema';
 
 // Generate a random session ID
 function generateId(): string {
@@ -71,7 +70,14 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
   const computedHash = Array.from(hashArray)
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
-  return computedHash === hashHex;
+
+  // Constant-time comparison to prevent timing attacks
+  if (computedHash.length !== hashHex.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < computedHash.length; i++) {
+    mismatch |= computedHash.charCodeAt(i) ^ hashHex.charCodeAt(i);
+  }
+  return mismatch === 0;
 }
 
 // Create a session for a user
@@ -114,6 +120,16 @@ export async function destroySession(
   if (sessionId) {
     await deleteSession(db, sessionId);
   }
+}
+
+// Check whether a user may access a project (owner or collaborator)
+export async function canAccessProject(
+  db: D1Database,
+  project: Project,
+  userId: string
+): Promise<boolean> {
+  if (project.owner_id === userId) return true;
+  return isCollaborator(db, project.id, userId);
 }
 
 // Simple cookie parser

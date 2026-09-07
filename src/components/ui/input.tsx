@@ -1,11 +1,20 @@
-import { jsx } from 'hono/jsx';
+import type { Child } from 'hono/jsx';
 
 interface FieldProps {
   label?: string;
   error?: string;
   hint?: string;
   class?: string;
-  [key: string]: any;
+  id?: string;
+  name?: string;
+  type?: string;
+  placeholder?: string;
+  value?: string;
+  required?: boolean;
+  disabled?: boolean;
+  accept?: string;
+  multiple?: boolean;
+  [key: string]: unknown;
 }
 
 export function InputField({ label, error, hint, class: extraClass = '', ...props }: FieldProps) {
@@ -19,7 +28,7 @@ export function InputField({ label, error, hint, class: extraClass = '', ...prop
   );
 }
 
-export function SelectField({ label, error, hint, children, class: extraClass = '', ...props }: FieldProps & { children: any }) {
+export function SelectField({ label, error, hint, children, class: extraClass = '', ...props }: FieldProps & { children: Child }) {
   return (
     <div>
       {label && <label class='block text-base font-semibold mb-2 text-slate-800' for={props.id}>{label}</label>}
