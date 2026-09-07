@@ -425,6 +425,16 @@ export async function updateUploadAiResult(
   uploadId: string,
   result: UpdateAiResultInput
 ): Promise<boolean> {
+  if (result.status === 'failed') {
+    // Bei einem Fehlschlag keine Tags/Beschreibung überschreiben – sonst gehen
+    // z.B. bereits gespeicherte manuelle Tags verloren. Nur Status + Fehler setzen.
+    const changed = await db
+      .prepare('UPDATE uploads SET tag_status = ?, tag_error = ? WHERE id = ?')
+      .bind(result.status, result.error ?? '', uploadId)
+      .run();
+    return changed.success;
+  }
+
   const changed = await db
     .prepare(
       'UPDATE uploads SET tags = ?, ai_tags = ?, ai_description = ?, tag_status = ?, tag_error = ? WHERE id = ?'

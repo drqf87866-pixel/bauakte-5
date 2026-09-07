@@ -6,7 +6,7 @@ import { InputField } from '../components/ui/input';
 import { Pagination } from '../components/ui/pagination';
 import { ProjectTabs } from '../components/layout/project-tabs';
 import { PhaseActionPanel } from '../components/upload/phase-panel';
-import { UploadCaption, TagChips, AiStatusIndicator } from '../components/upload/upload-meta';
+import { UploadCaption, TagChips, AiStatusIndicator, PendingUploadPoller, isUploadStale } from '../components/upload/upload-meta';
 
 function qs(params: Record<string, string | string[] | undefined>): string {
   const parts: string[] = [];
@@ -222,36 +222,10 @@ export function ProjectDocumentsPage({
           })} />
       )}
 
-      {/* Auto-Refresh: poll for pending uploads, reload when done */}
-      {uploads.some(u => u.type === 'image' && (u.tag_status === 'pending' || u.tag_status === 'failed')) && (() => {
-        const pendingIds = uploads
-          .filter(u => u.type === 'image' && (u.tag_status === 'pending'))
-          .map(u => u.id);
-        if (pendingIds.length === 0) return null;
-        const idsParam = pendingIds.join(',');
-        return (
-          <script dangerouslySetInnerHTML={{ __html: `
-            (function() {
-              var ids = '${idsParam}'.split(',').filter(Boolean);
-              if (!ids.length) return;
-              var timer = setInterval(function() {
-                fetch('/uploads/status?ids=' + ids.join(','))
-                  .then(function(r) { return r.json(); })
-                  .then(function(data) {
-                    var remaining = ids.filter(function(id) {
-                      return data.statuses[id] === 'pending';
-                    });
-                    if (remaining.length === 0) {
-                      clearInterval(timer);
-                      window.location.reload();
-                    }
-                  })
-                  .catch(function() {});
-              }, 4000);
-            })();
-          `}} />
-        );
-      })()}
+      {/* Auto-Refresh: poll for pending (nicht bereits hängengebliebene) uploads, reload when done/stale */}
+      <PendingUploadPoller ids={uploads
+        .filter(u => u.type === 'image' && u.tag_status === 'pending' && !isUploadStale(u))
+        .map(u => u.id)} />
     </Layout>
   );
 }

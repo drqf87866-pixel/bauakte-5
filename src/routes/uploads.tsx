@@ -5,6 +5,7 @@ import { deleteFile } from '../lib/r2';
 import { runAiTagging, mergeAndSaveTags } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
+import { isUploadStale } from '../components/upload/upload-meta';
 import { UploadDetailPage } from '../views/upload-detail';
 
 const uploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
@@ -179,17 +180,21 @@ uploadRoutes.post('/projects/:projectId/batch-retag', requireAuth, async (c) => 
 // JSON endpoint: poll tag_status for a list of uploads (auto-refresh)
 uploadRoutes.get('/uploads/status', requireAuth, async (c) => {
   const idsParam = c.req.query('ids');
-  if (!idsParam) return c.json({ statuses: {} });
+  if (!idsParam) return c.json({ statuses: {}, stale: {} });
 
   const ids = idsParam.split(',').filter(Boolean).slice(0, 50);
   const statuses: Record<string, string> = {};
+  const stale: Record<string, boolean> = {};
 
   for (const id of ids) {
     const upload = await getUploadById(c.env.DB, id);
-    if (upload) statuses[id] = upload.tag_status;
+    if (upload) {
+      statuses[id] = upload.tag_status;
+      stale[id] = isUploadStale(upload);
+    }
   }
 
-  return c.json({ statuses });
+  return c.json({ statuses, stale });
 });
 
 // Serve R2 file (requires auth + project access)

@@ -55,7 +55,7 @@ describe('formatTags', () => {
 });
 
 describe('arrayBufferToBase64', () => {
-  it('encodes bytes as base64 (chunked)', () => {
+  it('encodes bytes as base64', () => {
     const bytes = new TextEncoder().encode('Hello');
     expect(arrayBufferToBase64(bytes.buffer as ArrayBuffer)).toBe(btoa('Hello'));
   });

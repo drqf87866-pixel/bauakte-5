@@ -122,9 +122,9 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    // args: [tags, ai_tags, ai_description, tag_status, tag_error]
-    expect(last.args[3]).toBe('failed');
-    expect(last.args[4]).toContain('workers ai unavailable');
+    // Fehlerfall: args = [tag_status, tag_error, uploadId] (Tags bleiben unangetastet)
+    expect(last.args[0]).toBe('failed');
+    expect(last.args[1]).toContain('workers ai unavailable');
 
     consoleSpy.mockRestore();
   });
@@ -143,7 +143,7 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[3]).toBe('failed');
+    expect(last.args[0]).toBe('failed');
   });
 
   it('marks upload as failed when the R2 object is missing', async () => {
@@ -159,8 +159,8 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[3]).toBe('failed');
-    expect(last.args[4]).toContain('R2');
+    expect(last.args[0]).toBe('failed');
+    expect(last.args[1]).toContain('R2');
   });
 
   it('skips analysis (failed with hint) for images above the size limit', async () => {
@@ -176,8 +176,29 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[3]).toBe('failed');
-    expect(String(last.args[4])).toContain('zu groß');
+    expect(last.args[0]).toBe('failed');
+    expect(String(last.args[1])).toContain('zu groß');
+  });
+
+  it('does not overwrite existing tags in the DB when the analysis fails', async () => {
+    const { env, updates, get, run } = createMockEnv();
+    get.mockResolvedValue(r2Object(10));
+    run.mockRejectedValue(new Error('workers ai unavailable'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runAiTagging(env, {
+      uploadId: 'up-1',
+      type: 'image',
+      r2Key: 'uploads/phase-1/up-1.jpg',
+      mimeType: 'image/jpeg',
+    });
+
+    const last = updates[updates.length - 1];
+    // Nur tag_status + tag_error werden geschrieben, tags/ai_tags/ai_description bleiben unangetastet
+    expect(last.sql).not.toMatch(/tags/i);
+    expect(last.args).toEqual(['failed', expect.stringContaining('workers ai unavailable'), 'up-1']);
+
+    consoleSpy.mockRestore();
   });
 
   it('does nothing for non-image uploads', async () => {

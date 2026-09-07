@@ -178,13 +178,10 @@ function parseAiResponse(raw: string): AiTagResult | null {
 }
 
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < bytes.byteLength; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
+  // Native Buffer-Kodierung statt manueller JS-Schleife: deutlich weniger
+  // CPU-Zeit, wichtig für das Free-Plan-Limit (10 ms/Request) direkt vor
+  // dem env.AI.run()-Aufruf. Verfügbar dank "nodejs_compat" (wrangler.jsonc).
+  return Buffer.from(buffer).toString('base64');
 }
 
 /**

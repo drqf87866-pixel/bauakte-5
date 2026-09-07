@@ -3,7 +3,7 @@ import type { Upload, Phase, Project, User } from '../db/schema';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
-import { uploadCaption } from '../components/upload/upload-meta';
+import { uploadCaption, isUploadStale, PendingUploadPoller } from '../components/upload/upload-meta';
 
 function documentsUrl(projectId: string): string {
   return '/projects/' + projectId + '/documents';
@@ -128,10 +128,20 @@ export function UploadDetailPage({
           {upload.type === 'image' && upload.tag_status !== 'done' && upload.tag_status !== 'none' && (
             <div class='card'>
               <h2 class='font-bold text-sm text-stone-600 uppercase tracking-wide mb-2'>KI-Status</h2>
-              {upload.tag_status === 'pending' && (
+              {upload.tag_status === 'pending' && !isUploadStale(upload) && (
                 <div class='flex items-center gap-2'>
                   <svg class='animate-spin shrink-0 text-accent' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
                   <span class='text-sm font-semibold text-[#8a6a1f]'>Wird analysiert&hellip;</span>
+                </div>
+              )}
+              {upload.tag_status === 'pending' && isUploadStale(upload) && (
+                <div class='space-y-2'>
+                  <p class='text-sm font-semibold text-[#8a6a1f]'>
+                    Analyse dauert ungewöhnlich lange
+                  </p>
+                  <form method='post' action={'/uploads/' + upload.id + '/retag'} class='inline'>
+                    <Button type='submit' variant='secondary' size='sm'>Erneut analysieren</Button>
+                  </form>
                 </div>
               )}
               {upload.tag_status === 'failed' && (
@@ -145,6 +155,9 @@ export function UploadDetailPage({
                 </div>
               )}
             </div>
+          )}
+          {upload.type === 'image' && upload.tag_status === 'pending' && !isUploadStale(upload) && (
+            <PendingUploadPoller ids={[upload.id]} />
           )}
 
           {/* Aktionen */}

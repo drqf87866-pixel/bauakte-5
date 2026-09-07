@@ -46,16 +46,44 @@ export function TagChips({ upload, limit }: { upload: Upload; limit?: number }) 
   );
 }
 
-/** Shows the async AI-tagging status of an image upload (pending spinner / failed + retry). */
+/**
+ * Wie lange ein Upload höchstens 'pending' bleiben sollte, bevor wir die
+ * automatische KI-Analyse als "hängengeblieben" behandeln (z.B. weil der
+ * Worker das Free-Plan-CPU-Limit gerissen hat, bevor env.AI.run() erreicht
+ * wurde – dabei greift der try/catch in runAiTagging nicht, tag_status bleibt
+ * sonst für immer 'pending'). Es gibt keine updated_at-Spalte, daher wird
+ * created_at als Referenz genutzt.
+ */
+export const AI_STALE_THRESHOLD_MS = 90_000;
+
+export function isUploadStale(upload: Pick<Upload, 'tag_status' | 'created_at'>): boolean {
+  if (upload.tag_status !== 'pending') return false;
+  return Date.now() - new Date(upload.created_at).getTime() > AI_STALE_THRESHOLD_MS;
+}
+
+/** Shows the async AI-tagging status of an image upload (pending spinner / stale hint / failed + retry). */
 export function AiStatusIndicator({ upload }: { upload: Upload }) {
   if (upload.type !== 'image' || upload.tag_status === 'done' || upload.tag_status === 'none') {
     return null;
   }
-  if (upload.tag_status === 'pending') {
+  if (upload.tag_status === 'pending' && !isUploadStale(upload)) {
     return (
       <div class='flex items-center gap-1.5 mt-2'>
         <svg class='animate-spin shrink-0 text-accent' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
         <span class='text-xs font-semibold text-[#8a6a1f]'>Wird analysiert&hellip;</span>
+      </div>
+    );
+  }
+  if (upload.tag_status === 'pending') {
+    // Stale: die Analyse hängt vermutlich fest (z.B. CPU-Limit gerissen).
+    return (
+      <div class='flex items-center justify-between gap-2 mt-2'>
+        <span class='text-xs font-semibold text-[#8a6a1f] truncate'>
+          Analyse dauert ungewöhnlich lange
+        </span>
+        <form method='post' action={'/uploads/' + upload.id + '/retag'} class='inline shrink-0'>
+          <Button type='submit' variant='secondary' size='sm'>Erneut analysieren</Button>
+        </form>
       </div>
     );
   }
@@ -68,5 +96,45 @@ export function AiStatusIndicator({ upload }: { upload: Upload }) {
         <Button type='submit' variant='secondary' size='sm'>Erneut analysieren</Button>
       </form>
     </div>
+  );
+}
+
+/**
+ * Client-side Auto-Refresh für 'pending' Uploads: pollt /uploads/status alle
+ * 4s. Bricht ab (statt für immer zu pollen), sobald der Server einen Upload
+ * als "stale" meldet, oder spätestens nach MAX_ATTEMPTS – ein erneuter Reload
+ * zeigt dann den serverseitig berechneten Stale-Hinweis inkl. Retry-Button
+ * (siehe isUploadStale/AiStatusIndicator oben).
+ */
+export function PendingUploadPoller({ ids }: { ids: string[] }) {
+  if (ids.length === 0) return null;
+  const idsParam = ids.join(',');
+  return (
+    <script dangerouslySetInnerHTML={{ __html: `
+      (function() {
+        var ids = '${idsParam}'.split(',').filter(Boolean);
+        if (!ids.length) return;
+        var attempts = 0;
+        var MAX_ATTEMPTS = 20; // ~80s bei 4s-Intervall
+        var timer = setInterval(function() {
+          attempts++;
+          fetch('/uploads/status?ids=' + ids.join(','))
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+              var remaining = ids.filter(function(id) {
+                return data.statuses[id] === 'pending';
+              });
+              var stale = ids.some(function(id) {
+                return data.stale && data.stale[id];
+              });
+              if (remaining.length === 0 || stale || attempts >= MAX_ATTEMPTS) {
+                clearInterval(timer);
+                window.location.reload();
+              }
+            })
+            .catch(function() {});
+        }, 4000);
+      })();
+    `}} />
   );
 }
