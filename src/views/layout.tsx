@@ -115,7 +115,11 @@ export function Layout({
           var swWaiting = null;
 
           // --- Service Worker Registration & Update Detection ---
-          if ('serviceWorker' in navigator) {
+          if ('serviceWorker' in navigator && (location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              regs.forEach(function (reg) { reg.unregister(); });
+            });
+          } else if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
               navigator.serviceWorker.register('/sw.js').then(function(reg) {
                 if (reg.waiting) {

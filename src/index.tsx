@@ -39,7 +39,7 @@ app.use('*', async (c, next) => {
   }
   // Cache static CSS
   if (res.headers.get('content-type')?.includes('text/css')) {
-    headers['Cache-Control'] = 'public, max-age=3600, immutable';
+    headers['Cache-Control'] = 'public, max-age=300';
   }
   for (const [key, value] of Object.entries(headers)) {
     if (!res.headers.has(key)) {

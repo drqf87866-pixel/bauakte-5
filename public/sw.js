@@ -1,5 +1,5 @@
-var CACHE = 'bauakte-v2';
-var STATIC_URLS = [
+var CACHE = 'bauakte-v3';
+var PRECACHE_URLS = [
   '/app.css',
   '/manifest.json',
   '/icons/icon.svg',
@@ -9,11 +9,12 @@ var STATIC_URLS = [
   '/icons/apple-icon-152.png',
   '/offline.html',
 ];
+var SWR_URLS = ['/app.css', '/manifest.json'];
 
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
-      return cache.addAll(STATIC_URLS);
+      return cache.addAll(PRECACHE_URLS);
     })
   );
   self.skipWaiting();
@@ -46,7 +47,12 @@ self.addEventListener('fetch', function (event) {
 
   var path = url.pathname;
 
-  var isStatic = STATIC_URLS.indexOf(path) !== -1;
+  if (SWR_URLS.indexOf(path) !== -1) {
+    event.respondWith(staleWhileRevalidate(request));
+    return;
+  }
+
+  var isStatic = PRECACHE_URLS.indexOf(path) !== -1;
   if (isStatic) {
     event.respondWith(caches.match(request));
     return;
@@ -77,6 +83,24 @@ function networkFirstWithCache(request) {
       .catch(function () {
         return caches.match(request);
       });
+  });
+}
+
+function staleWhileRevalidate(request) {
+  return caches.open(CACHE).then(function (cache) {
+    return cache.match(request).then(function (cached) {
+      var network = fetch(request)
+        .then(function (response) {
+          if (response.ok) {
+            cache.put(request, response.clone());
+          }
+          return response;
+        })
+        .catch(function () {
+          return cached || Response.error();
+        });
+      return cached || network;
+    });
   });
 }
 
