@@ -22,11 +22,11 @@ export function SharePage({
       <div class='mb-4'>
         <ProjectTabs projectId={project.id} active='share' isOwner={true} />
       </div>
-      <h1 class='text-2xl font-bold mb-6 text-slate-900'>Projekt teilen</h1>
+      <h1 class='text-2xl font-bold mb-6 text-stone-900'>Projekt teilen</h1>
       <Flash ok={ok} />
       <div class='card mb-6'>
-        <h2 class='font-bold text-lg mb-3 text-slate-900'>Neuen Einladungslink erstellen</h2>
-        <p class='text-base text-slate-600 mb-4 font-medium'>
+        <h2 class='font-bold text-lg mb-3 text-stone-900'>Neuen Einladungslink erstellen</h2>
+        <p class='text-base text-stone-600 mb-4 font-medium'>
           Jeder mit dem Link kann sich registrieren und erh&auml;lt vollen Zugriff auf das Projekt.
         </p>
         <form method='post' action={'/projects/' + project.id + '/share/create'}>
@@ -38,7 +38,7 @@ export function SharePage({
       </div>
       {shareLinks.length > 0 && (
         <div class='space-y-3'>
-          <h2 class='font-bold text-lg mb-3 text-slate-900'>Aktive Einladungslinks</h2>
+          <h2 class='font-bold text-lg mb-3 text-stone-900'>Aktive Einladungslinks</h2>
           {shareLinks.map((link) => (
             <div key={link.id} class='card flex flex-col sm:flex-row sm:items-center gap-3'>
               <div class='flex-1 min-w-0 relative'>
@@ -47,10 +47,10 @@ export function SharePage({
                   value={baseUrl + '/share/' + link.token}
                   readOnly
                   aria-label='Einladungslink – zum Kopieren antippen'
-                  class='w-full text-sm text-accent bg-accent-light px-4 py-3 pr-10 rounded-lg border border-amber-300 text-base cursor-pointer'
+                  class='w-full text-sm text-[#8a6a1f] bg-accent-light px-4 py-3 pr-10 rounded-xl border border-[#f3e4c4] text-base cursor-pointer'
                   data-copy-link />
-                <svg class='shrink-0 absolute right-2 top-2.5 text-amber-400 pointer-events-none' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>
-                <p class='text-xs text-slate-500 mt-1 font-medium'>
+                <svg class='shrink-0 absolute right-2 top-2.5 text-accent pointer-events-none' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>
+                <p class='text-xs text-stone-500 mt-1 font-medium'>
                   Erstellt am {new Date(link.created_at).toLocaleDateString('de-DE')}
                 </p>
               </div>

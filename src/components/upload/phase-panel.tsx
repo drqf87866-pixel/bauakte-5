@@ -10,17 +10,17 @@ function PhaseNotesEditor({
   notes: string;
 }) {
   return (
-    <details class='mt-4 pt-4 border-t border-slate-100 group'>
-      <summary class={'flex items-center justify-between gap-2 cursor-pointer list-none rounded-lg px-3 py-2 -mx-3 min-h-[48px] hover:bg-slate-50 transition ' +
+    <details class='mt-4 pt-4 border-t border-stone-100 group'>
+      <summary class={'flex items-center justify-between gap-2 cursor-pointer list-none rounded-lg px-3 py-2 -mx-3 min-h-[48px] hover:bg-stone-50 transition ' +
         (notes ? '' : 'text-accent')}>
-        <span class='flex items-center gap-2 font-semibold text-slate-800 text-sm'>
-          <svg class='shrink-0 text-slate-500' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='9' y1='13' x2='15' y2='13'/><line x1='9' y1='17' x2='13' y2='17'/></svg>
+        <span class='flex items-center gap-2 font-semibold text-stone-800 text-sm'>
+          <svg class='shrink-0 text-stone-500' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><polyline points='14 2 14 8 20 8'/><line x1='9' y1='13' x2='15' y2='13'/><line x1='9' y1='17' x2='13' y2='17'/></svg>
           {notes ? 'Phasen-Notiz' : 'Notiz hinzufügen'}
           {/* Visible on all screen sizes (previously hidden on mobile) so a note is never invisible */}
           {notes && <span class='inline-flex w-1.5 h-1.5 rounded-full bg-accent' aria-hidden='true'></span>}
         </span>
-        <span class='flex items-center gap-2 text-xs font-semibold text-slate-500'>
-          {notes && <span class='hidden sm:inline line-clamp-1 max-w-xs text-slate-500'>{notes}</span>}
+        <span class='flex items-center gap-2 text-xs font-semibold text-stone-500'>
+          {notes && <span class='hidden sm:inline line-clamp-1 max-w-xs text-stone-500'>{notes}</span>}
           <svg class='shrink-0 transition group-open:rotate-180' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>
         </span>
       </summary>
@@ -50,8 +50,8 @@ export function PhaseActionPanel({ project, phase }: { project: Project; phase: 
     <div class='card mb-6'>
       <div class='flex flex-col md:flex-row items-start md:items-center justify-between gap-4'>
         <div>
-          <h2 class='text-xl font-bold text-slate-900'>{phase.name}</h2>
-          <p class='text-sm text-slate-600 font-medium mt-1'>Phase {phase.sort_order}</p>
+          <h2 class='text-xl font-bold text-stone-900'>{phase.name}</h2>
+          <p class='text-sm text-stone-600 font-medium mt-1'>Phase {phase.sort_order}</p>
         </div>
         <div class='w-full md:w-auto'>
           {phase.status === 'in_progress' && (
@@ -64,7 +64,7 @@ export function PhaseActionPanel({ project, phase }: { project: Project; phase: 
           )}
           {phase.status === 'completed' && (
             <div class='flex flex-col sm:flex-row gap-2 w-full md:w-auto'>
-              <span class='block w-full md:w-auto text-center bg-success text-white px-4 py-3 rounded-lg text-base font-bold min-h-[48px] flex items-center justify-center gap-2'>
+              <span class='block w-full md:w-auto text-center bg-success text-white px-4 py-3 rounded-xl text-base font-semibold min-h-[48px] flex items-center justify-center gap-2'>
                 <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg>
                 Abgeschlossen
               </span>
@@ -81,8 +81,8 @@ export function PhaseActionPanel({ project, phase }: { project: Project; phase: 
 
       <PhaseNotesEditor phaseId={phase.id} projectId={project.id} notes={phase.notes} />
 
-      <div class='mt-4 pt-4 border-t border-slate-100'>
-        <h3 class='font-bold text-base mb-3 text-slate-900'>Dokumentation hinzuf&uuml;gen</h3>
+      <div class='mt-4 pt-4 border-t border-stone-100'>
+        <h3 class='font-bold text-base mb-3 text-stone-900'>Dokumentation hinzuf&uuml;gen</h3>
         <form method='post'
           action={'/projects/' + project.id + '/phases/' + phase.id + '/upload'}
           encType='multipart/form-data'

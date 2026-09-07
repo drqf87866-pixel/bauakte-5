@@ -15,11 +15,11 @@ export function Breadcrumb({ items, class: extraClass = '' }: BreadcrumbProps) {
     <div class={'breadcrumb ' + extraClass}>
       {items.map((item, i) => (
         <Fragment>
-          {i > 0 && <span class='text-slate-400'>/</span>}
+          {i > 0 && <span class='text-stone-400'>/</span>}
           {item.href ? (
-            <a href={item.href} class='text-accent hover:underline font-semibold no-underline'>{item.label}</a>
+            <a href={item.href} class='text-brand hover:underline font-semibold no-underline'>{item.label}</a>
           ) : (
-            <span class='text-slate-700 font-bold'>{item.label}</span>
+            <span class='text-stone-700 font-semibold'>{item.label}</span>
           )}
         </Fragment>
       ))}

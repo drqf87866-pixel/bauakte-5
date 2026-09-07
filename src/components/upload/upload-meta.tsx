@@ -20,7 +20,7 @@ export function UploadCaption({ upload }: { upload: Upload }) {
   const caption = uploadCaption(upload);
   if (!caption.text) return null;
   return (
-    <p class={'text-xs mt-1 line-clamp-2 ' + (caption.fromAi ? 'text-slate-500 italic' : 'text-slate-600')}>
+    <p class={'text-xs mt-1 line-clamp-2 ' + (caption.fromAi ? 'text-stone-500 italic' : 'text-stone-600')}>
       {caption.fromAi && (
         <svg class='inline-block mr-1 text-accent -mt-0.5' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='currentColor'><path d='M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8z'/></svg>
       )}
@@ -38,7 +38,7 @@ export function TagChips({ upload, limit }: { upload: Upload; limit?: number }) 
     <div class='flex flex-wrap gap-1 mt-2'>
       {shown.map((tag) => <Badge key={tag} variant='tag'>{tag}</Badge>)}
       {hidden > 0 && (
-        <span class='text-xs text-slate-400 font-semibold self-center' title={tags.slice(limit).join(', ')}>
+        <span class='text-xs text-stone-400 font-semibold self-center' title={tags.slice(limit).join(', ')}>
           +{hidden}
         </span>
       )}
@@ -54,14 +54,14 @@ export function AiStatusIndicator({ upload }: { upload: Upload }) {
   if (upload.tag_status === 'pending') {
     return (
       <div class='flex items-center gap-1.5 mt-2'>
-        <svg class='animate-spin shrink-0 text-amber-600' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
-        <span class='text-xs font-semibold text-amber-700'>Wird analysiert&hellip;</span>
+        <svg class='animate-spin shrink-0 text-accent' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
+        <span class='text-xs font-semibold text-[#8a6a1f]'>Wird analysiert&hellip;</span>
       </div>
     );
   }
   return (
     <div class='flex items-center justify-between gap-2 mt-2'>
-      <span class='text-xs font-semibold text-red-700 truncate' title={upload.tag_error || undefined}>
+      <span class='text-xs font-semibold text-error truncate' title={upload.tag_error || undefined}>
         Analyse fehlgeschlagen
       </span>
       <form method='post' action={'/uploads/' + upload.id + '/retag'} class='inline shrink-0'>

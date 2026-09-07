@@ -23,6 +23,9 @@ const FLASH_MESSAGES: Record<string, string> = {
   'project-deleted': 'Projekt wurde gelöscht.',
   'link-created': 'Einladungslink wurde erstellt.',
   'link-deactivated': 'Einladungslink wurde deaktiviert.',
+  'notes-saved': 'Notiz wurde gespeichert.',
+  'tags-saved': 'Tags wurden gespeichert.',
+  'batch-analyzed': 'Ausstehende Bilder wurden analysiert.',
   'no-file': 'Bitte wähle zuerst eine Datei aus.',
   'upload-failed': 'Upload fehlgeschlagen. Bitte versuche es erneut.',
   'missing-fields': 'Bitte Projekt, Bauphase und Datei angeben.',
@@ -52,11 +55,14 @@ export function Layout({
       <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' />
-        <meta name='theme-color' content='#b91c1c' />
+        <meta name='theme-color' content='#b5502e' />
         <meta name='apple-mobile-web-app-capable' content='yes' />
         <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
         <meta name='apple-mobile-web-app-title' content='Bauakte' />
         <title>{title ? `${title} - Bauakte`: 'Bauakte'}</title>
+        <link rel='preconnect' href='https://fonts.googleapis.com' />
+        <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin='' />
+        <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap' />
         <link rel='stylesheet' href='/app.css' />
         <link rel='manifest' href='/manifest.json' />
         <link rel='apple-touch-icon' href='/icons/apple-icon-180.png' />
@@ -167,7 +173,7 @@ export function Layout({
             if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-img-fallback')) return;
             img.style.display = 'none';
             var placeholder = document.createElement('div');
-            placeholder.className = 'w-full h-32 sm:h-48 bg-slate-200 flex items-center justify-center text-slate-400';
+            placeholder.className = 'w-full h-32 sm:h-48 bg-stone-200 flex items-center justify-center text-stone-400';
             placeholder.innerHTML = '<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
             img.parentNode.insertBefore(placeholder, img.nextSibling);
           });
@@ -220,7 +226,7 @@ export function Layout({
           function loadQuickUploadForm() {
             var body = document.getElementById('quick-upload-sheet-body');
             if (!body) return;
-            body.innerHTML = '<div class="flex items-center justify-center py-10 text-slate-400"><svg class="animate-spin shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>';
+            body.innerHTML = '<div class="flex items-center justify-center py-10 text-stone-400"><svg class="animate-spin shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>';
             fetch('/upload-quick?fragment=1')
               .then(function(res) { return res.text(); })
               .then(function(html) { body.innerHTML = html; })
@@ -450,7 +456,7 @@ export function Layout({
           }
         `}} />
       </head>
-      <body class='bg-slate-50 min-h-screen text-slate-800'>
+      <body class='bg-[#faf8f5] min-h-screen text-stone-800'>
         {/* PWA Install Banner (Android/Chrome) */}
         <div id='install-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-brand text-white px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
           <div class='flex items-center gap-3'>
@@ -458,7 +464,7 @@ export function Layout({
             <span class='text-sm font-medium'>Bauakte als App installieren</span>
           </div>
           <div class='flex items-center gap-2'>
-            <button id='install-btn' class='bg-white text-brand font-semibold px-4 py-1.5 rounded-lg text-sm cursor-pointer border-0 hover:bg-red-50 transition'>Installieren</button>
+            <button id='install-btn' class='bg-white text-brand font-semibold px-4 py-1.5 rounded-xl text-sm cursor-pointer border-0 hover:bg-brand-light transition'>Installieren</button>
             <button onclick='dismissInstall()' class='text-white/80 hover:text-white cursor-pointer border-0 bg-transparent p-1' aria-label='Schließen'>
               <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>
             </button>
@@ -466,7 +472,7 @@ export function Layout({
         </div>
 
         {/* PWA Install Banner (iOS) */}
-        <div id='ios-install-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-slate-900 text-white px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
+        <div id='ios-install-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-stone-900 text-white px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
           <div class='flex items-center gap-3'>
             <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg>
             <span class='text-sm font-medium'>App installieren: Teilen <span class='inline-block px-1' aria-hidden='true'>⬆️</span> → „Zum Home-Bildschirm"</span>
@@ -477,14 +483,14 @@ export function Layout({
         </div>
 
         {/* Update Banner */}
-        <div id='update-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-warning text-slate-900 px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
+        <div id='update-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-warning text-[#3a2c12] px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
           <div class='flex items-center gap-3'>
             <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 4 23 10 17 10'/><polyline points='1 20 1 14 7 14'/><path d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/></svg>
             <span class='text-sm font-medium'>Neue Version verfügbar</span>
           </div>
           <div class='flex items-center gap-2'>
-            <button onclick='applyUpdate()' class='bg-slate-900 text-white font-semibold px-4 py-1.5 rounded-lg text-sm cursor-pointer border-0 hover:bg-slate-800 transition'>Aktualisieren</button>
-            <button onclick='dismissUpdate()' class='text-slate-700 hover:text-slate-900 cursor-pointer border-0 bg-transparent p-1' aria-label='Schließen'>
+            <button onclick='applyUpdate()' class='bg-stone-900 text-white font-semibold px-4 py-1.5 rounded-xl text-sm cursor-pointer border-0 hover:bg-stone-800 transition'>Aktualisieren</button>
+            <button onclick='dismissUpdate()' class='text-[#3a2c12]/70 hover:text-[#3a2c12] cursor-pointer border-0 bg-transparent p-1' aria-label='Schließen'>
               <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>
             </button>
           </div>
@@ -509,7 +515,7 @@ export function Layout({
         {user && <Lightbox />}
 
         {/* Toast (e.g. "Link kopiert") */}
-        <div id='toast' class='hidden fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[95] bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg animate-fade-in' role='status' aria-live='polite'></div>
+        <div id='toast' class='hidden fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[95] bg-stone-900 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-lg animate-fade-in' role='status' aria-live='polite'></div>
       </body>
     </html>
   );

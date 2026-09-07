@@ -1,22 +1,29 @@
 @import "tailwindcss";
 
-@theme {
-  /* Brand */
-  --color-brand: #b91c1c;
-  --color-brand-light: #fef2f2;
-  --color-brand-dark: #7f1d1d;
+/* Sora (Überschriften) + Inter (Text) werden in layout.tsx per <link> geladen,
+   damit der Font-Request nicht vom Tailwind-CSS-Build abhängt. */
 
-  /* Accent */
-  --color-accent: #f59e0b;
-  --color-accent-light: #fffbeb;
+@theme {
+  /* Brand — Terracotta */
+  --color-brand: #b5502e;
+  --color-brand-light: #fdf1ea;
+  --color-brand-dark: #9c4325;
+
+  /* Accent — Ocker/Gold (KI-Kennzeichnung, Sekundär-Highlights) */
+  --color-accent: #c99a3d;
+  --color-accent-light: #fbf3e1;
 
   /* Semantic */
-  --color-success: #059669;
-  --color-success-light: #ecfdf5;
-  --color-error: #dc2626;
-  --color-error-light: #fef2f2;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fffbeb;
+  --color-success: #4d8b6a;
+  --color-success-light: #eaf3ec;
+  --color-error: #c2453b;
+  --color-error-light: #fbeeed;
+  --color-warning: #c99a3d;
+  --color-warning-light: #fbf3e1;
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Classes added at runtime via JS – force generation */
@@ -30,21 +37,28 @@
   }
 }
 
+body {
+  font-family: var(--font-sans);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
 /* Buttons */
 @utility btn-primary {
-  @apply bg-brand text-white px-6 py-3 rounded-lg hover:bg-brand-dark transition min-h-[48px] font-bold text-base inline-flex items-center justify-center gap-2 no-underline border-0 cursor-pointer;
+  @apply bg-brand text-white px-6 py-3 rounded-xl hover:bg-brand-dark transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 no-underline border-0 cursor-pointer;
 }
 @utility btn-secondary {
-  @apply bg-slate-200 text-slate-900 px-6 py-3 rounded-lg hover:bg-slate-300 transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 no-underline border-0 cursor-pointer;
+  @apply bg-brand-light text-brand-dark px-6 py-3 rounded-xl hover:bg-[#f8e4d6] transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 no-underline border-0 cursor-pointer;
 }
 @utility btn-danger {
-  @apply bg-error text-white px-6 py-3 rounded-lg hover:bg-red-700 transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 border-0 cursor-pointer;
+  @apply bg-error text-white px-6 py-3 rounded-xl hover:bg-[#a83a31] transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 border-0 cursor-pointer;
 }
 @utility btn-danger-outline {
-  @apply bg-white text-error border border-red-300 px-6 py-3 rounded-lg hover:bg-error-light transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 no-underline cursor-pointer;
+  @apply bg-white text-error border-[1.5px] border-[#f0c9c4] px-6 py-3 rounded-xl hover:bg-error-light transition min-h-[48px] font-semibold text-base inline-flex items-center justify-center gap-2 no-underline cursor-pointer;
 }
 @utility btn-ghost {
-  @apply bg-transparent text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-100 transition font-semibold text-base inline-flex items-center gap-2 border-0 cursor-pointer;
+  @apply bg-transparent text-stone-700 px-4 py-2 rounded-xl hover:bg-stone-100 transition font-semibold text-base inline-flex items-center gap-2 border-0 cursor-pointer;
 }
 @utility btn-sm {
   @apply px-4 py-2 min-h-[40px] text-sm;
@@ -52,12 +66,13 @@
 
 /* Inputs */
 @utility input-field {
-  @apply w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-accent min-h-[48px] text-base;
+  @apply w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-brand/30 focus:border-brand min-h-[48px] text-base bg-white;
 }
 
 /* Cards */
 @utility card {
-  @apply bg-white rounded-lg shadow-sm border p-5;
+  @apply bg-white rounded-2xl border border-stone-200 p-5;
+  box-shadow: 0 1px 2px rgba(181, 80, 46, 0.04), 0 12px 26px -16px rgba(120, 72, 40, 0.2);
 }
 @utility card-interactive {
   @apply card hover:shadow-md transition no-underline block;
@@ -65,39 +80,39 @@
 
 /* Badges */
 @utility badge-success {
-  @apply bg-success text-white text-sm px-3 py-1.5 rounded-full font-bold;
+  @apply bg-success-light text-[#3c6b48] text-sm px-3 py-1.5 rounded-full font-semibold;
 }
 @utility badge-progress {
-  @apply bg-accent text-slate-900 text-sm px-3 py-1.5 rounded-full font-bold;
+  @apply bg-accent-light text-[#8a6a1f] text-sm px-3 py-1.5 rounded-full font-semibold;
 }
 
 /* Alerts */
 @utility alert-error {
-  @apply bg-error-light border border-error text-error px-4 py-3 rounded-lg font-medium text-base flex items-center gap-2;
+  @apply bg-error-light border border-[#f0c9c4] text-error px-4 py-3 rounded-xl font-medium text-base flex items-center gap-2;
 }
 @utility alert-success {
-  @apply bg-success-light border border-success text-success px-4 py-3 rounded-lg font-medium text-base flex items-center gap-2;
+  @apply bg-success-light border border-[#cfe3d2] text-[#3c6b48] px-4 py-3 rounded-xl font-medium text-base flex items-center gap-2;
 }
 @utility alert-warning {
-  @apply bg-warning-light border border-warning text-slate-900 px-4 py-3 rounded-lg font-medium text-base flex items-center gap-2;
+  @apply bg-warning-light border border-[#f3e4c4] text-[#8a6a1f] px-4 py-3 rounded-xl font-medium text-base flex items-center gap-2;
 }
 
 /* Breadcrumb */
 @utility breadcrumb {
-  @apply text-sm font-medium flex items-center gap-2 text-slate-500 mb-4;
+  @apply text-sm font-medium flex items-center gap-2 text-stone-500 mb-4;
 }
 
 /* Empty state */
 @utility empty-state {
-  @apply text-center py-16 px-4 bg-white rounded-lg border border-dashed border-slate-300;
+  @apply text-center py-16 px-4 bg-white rounded-2xl border border-dashed border-stone-300;
 }
 
 /* Progress bar */
 @utility progress-track {
-  @apply w-full bg-slate-200 rounded-full;
+  @apply w-full bg-[#f0e9df] rounded-full;
 }
 @utility progress-fill {
-  @apply bg-success rounded-full transition-all;
+  @apply bg-brand rounded-full transition-all;
 }
 
 /* Safe area insets for mobile devices */

@@ -6,8 +6,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
-  "background_color": "#fef2f2",
-  "theme_color": "#b91c1c",
+  "background_color": "#faf8f5",
+  "theme_color": "#b5502e",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
   "shortcuts": [

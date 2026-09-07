@@ -12,7 +12,7 @@ export function ProgressBar({ value, max = 100, label, size = 'md', class: extra
   return (
     <div class={extraClass}>
       {label && (
-        <div class='flex justify-between text-sm text-slate-700 mb-1 font-semibold'>
+        <div class='flex justify-between text-sm text-stone-700 mb-1 font-semibold'>
           <span>{label}</span>
           <span>{value}/{max} ({pct}%)</span>
         </div>

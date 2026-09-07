@@ -31,7 +31,7 @@ export function ProjectTabs({ projectId, active, isOwner }: ProjectTabsProps) {
           class={'shrink-0 px-4 py-3 min-h-[48px] flex items-center text-sm font-bold no-underline border-b-2 transition ' +
             (active === tab.key
               ? 'border-brand text-brand'
-              : 'border-transparent text-slate-600 hover:text-slate-900')}>
+              : 'border-transparent text-stone-600 hover:text-stone-900')}>
           {tab.label}
         </a>
       ))}

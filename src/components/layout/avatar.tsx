@@ -1,14 +1,14 @@
 const AVATAR_PALETTE = [
-  { bg: 'bg-amber-500', text: 'text-white' },
-  { bg: 'bg-slate-600', text: 'text-white' },
+  { bg: 'bg-brand', text: 'text-white' },
+  { bg: 'bg-stone-600', text: 'text-white' },
   { bg: 'bg-stone-500', text: 'text-white' },
-  { bg: 'bg-emerald-600', text: 'text-white' },
-  { bg: 'bg-sky-600', text: 'text-white' },
-  { bg: 'bg-rose-500', text: 'text-white' },
-  { bg: 'bg-violet-500', text: 'text-white' },
-  { bg: 'bg-teal-600', text: 'text-white' },
-  { bg: 'bg-orange-500', text: 'text-white' },
-  { bg: 'bg-cyan-600', text: 'text-white' },
+  { bg: 'bg-emerald-700', text: 'text-white' },
+  { bg: 'bg-sky-700', text: 'text-white' },
+  { bg: 'bg-rose-600', text: 'text-white' },
+  { bg: 'bg-violet-600', text: 'text-white' },
+  { bg: 'bg-teal-700', text: 'text-white' },
+  { bg: 'bg-orange-600', text: 'text-white' },
+  { bg: 'bg-cyan-700', text: 'text-white' },
 ] as const;
 
 function getInitials(name: string): string {

@@ -19,7 +19,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   'danger': 'btn-danger',
   'danger-outline': 'btn-danger-outline',
   'ghost': 'btn-ghost',
-  'success': 'btn-primary bg-success hover:bg-emerald-700',
+  'success': 'btn-primary bg-success hover:bg-[#3c6b48]',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -77,7 +77,7 @@ export function ProjectDocumentsPage({
       <Breadcrumb items={[{ label: project.name, href: '/projects/' + project.id }, { label: 'Dokumente' }]} />
 
       {/* Tabs and filter bar stick together as one unit while scrolling the grid */}
-      <div class='sticky top-0 z-30 -mx-4 px-4 pt-1 bg-slate-50/95 backdrop-blur border-b border-slate-200 mb-4'>
+      <div class='sticky top-0 z-30 -mx-4 px-4 pt-1 bg-stone-50/95 backdrop-blur border-b border-stone-200 mb-4'>
         <ProjectTabs projectId={project.id} active='documents' isOwner={isOwner} />
 
         <div class='pb-3'>
@@ -93,14 +93,14 @@ export function ProjectDocumentsPage({
             <div class='flex flex-wrap gap-2 mb-3'>
               <a href={documentsUrl(baseUrl, activePhases, activeTag, q, '__clear_tag__')}
                 class={'px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
-                  (!activeTag ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300')}>
+                  (!activeTag ? 'bg-stone-900 text-white' : 'bg-stone-200 text-stone-700 hover:bg-stone-300')}>
                 Alle Tags
               </a>
               {tags.map(t => (
                 <a key={t.tag} href={documentsUrl(baseUrl, activePhases, activeTag, q, t.tag)}
                   class={'px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
-                    (activeTag === t.tag ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300')}>
-                  {t.tag} <span class={'ml-1 text-xs ' + (activeTag === t.tag ? 'opacity-75' : 'text-slate-500')}>{t.count}</span>
+                    (activeTag === t.tag ? 'bg-stone-900 text-white' : 'bg-stone-200 text-stone-700 hover:bg-stone-300')}>
+                  {t.tag} <span class={'ml-1 text-xs ' + (activeTag === t.tag ? 'opacity-75' : 'text-stone-500')}>{t.count}</span>
                 </a>
               ))}
             </div>
@@ -111,8 +111,8 @@ export function ProjectDocumentsPage({
               aria-current={activePhases.length === 0 ? 'page' : undefined}
               class={'snap-start shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
                 (activePhases.length === 0
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white text-slate-700 border border-slate-300 hover:border-slate-400')}>
+                  ? 'bg-stone-900 text-white'
+                  : 'bg-white text-stone-700 border border-stone-300 hover:border-stone-400')}>
               Alle Phasen
             </a>
             {phases.map(p => {
@@ -123,11 +123,11 @@ export function ProjectDocumentsPage({
                   aria-current={isActive ? 'page' : undefined}
                   class={'snap-start shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition relative ' +
                     (isActive
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-stone-900 text-white'
                       : p.status === 'completed'
-                        ? 'bg-white text-slate-700 border border-success hover:border-success'
-                        : 'bg-white text-slate-700 border border-slate-300 hover:border-slate-400')}>
-                  {p.name} <span class={'ml-1 text-xs ' + (isActive ? 'opacity-75' : 'text-slate-500')}>{count}</span>
+                        ? 'bg-white text-stone-700 border border-success hover:border-success'
+                        : 'bg-white text-stone-700 border border-stone-300 hover:border-stone-400')}>
+                  {p.name} <span class={'ml-1 text-xs ' + (isActive ? 'opacity-75' : 'text-stone-500')}>{count}</span>
                 </a>
               );
             })}
@@ -140,18 +140,18 @@ export function ProjectDocumentsPage({
       {/* Exactly one phase selected: show its status/notes/upload actions inline */}
       {focusedPhase && <PhaseActionPanel project={project} phase={focusedPhase} />}
 
-      <h2 class='font-bold text-lg mb-3 text-slate-900'>
+      <h2 class='font-bold text-lg mb-3 text-stone-900'>
         Dokumente ({uploadTotal})
       </h2>
 
       {uploads.length === 0 ? (
         <div class='empty-state'>
-          <svg class='mx-auto mb-3 text-slate-300' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>
-          <p class='font-bold text-slate-900'>
+          <svg class='mx-auto mb-3 text-stone-300' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>
+          <p class='font-bold text-stone-900'>
             {q ? <>Keine Treffer f&uuml;r &bdquo;{q}&ldquo;</> : activeTag ? <>Keine Medien mit Tag &bdquo;{activeTag}&ldquo;</> : focusedPhase ? 'Noch keine Dokumente in dieser Phase' : 'Noch keine Medien'}
           </p>
           {(q || activeTag) && (
-            <p class='text-sm text-slate-600 font-medium mt-1'>
+            <p class='text-sm text-stone-600 font-medium mt-1'>
               <a href={baseUrl} class='text-accent hover:underline font-semibold'>Filter zur&uuml;cksetzen</a>
             </p>
           )}
@@ -162,7 +162,7 @@ export function ProjectDocumentsPage({
             const phase = phases.find(p => p.id === upload.phase_id);
             const caption = upload.notes || upload.ai_description || upload.filename;
             return (
-              <div key={upload.id} class='bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col'>
+              <div key={upload.id} class='bg-white rounded-2xl border border-stone-200 overflow-hidden flex flex-col' style='box-shadow: 0 1px 2px rgba(181,80,46,0.04), 0 12px 26px -16px rgba(120,72,40,0.2);'>
                 {upload.type === 'image' ? (
                   <a href={'/r2/' + upload.r2_key} data-lightbox data-full-src={'/r2/' + upload.r2_key} data-caption={caption}
                     class='block cursor-zoom-in' aria-label={'Foto ' + upload.filename + ' in voller Größe öffnen'}>
@@ -172,13 +172,13 @@ export function ProjectDocumentsPage({
                   </a>
                 ) : upload.type === 'video' ? (
                   <a href={'/r2/' + upload.r2_key} target='_blank' rel='noopener'
-                    class='w-full h-40 sm:h-56 bg-slate-100 flex items-center justify-center text-slate-500 text-sm font-medium gap-2 no-underline hover:bg-slate-200 transition'>
+                    class='w-full h-40 sm:h-56 bg-stone-100 flex items-center justify-center text-stone-500 text-sm font-medium gap-2 no-underline hover:bg-stone-200 transition'>
                     <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2' ry='2'/></svg>
                     Video
                   </a>
                 ) : (
                   <a href={'/r2/' + upload.r2_key} target='_blank' rel='noopener'
-                    class='w-full h-40 sm:h-56 bg-slate-100 flex items-center justify-center text-slate-500 text-sm font-medium gap-2 no-underline hover:bg-slate-200 transition'>
+                    class='w-full h-40 sm:h-56 bg-stone-100 flex items-center justify-center text-stone-500 text-sm font-medium gap-2 no-underline hover:bg-stone-200 transition'>
                     <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/><polyline points='13 2 13 9 20 9'/></svg>
                     Dokument
                   </a>
@@ -187,13 +187,15 @@ export function ProjectDocumentsPage({
                   <div class='flex items-center gap-2 mb-1'>
                     {phase && !focusedPhase && (
                       <a href={documentsUrl(baseUrl, [], activeTag, undefined, phase.id)}
-                        class='text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-semibold no-underline hover:bg-slate-300'>
+                        class='text-xs bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-semibold no-underline hover:bg-stone-300'>
                         {phase.name}
                       </a>
                     )}
-                    <span class='text-xs text-slate-500 font-medium ml-auto'>{new Date(upload.created_at).toLocaleDateString('de-DE')}</span>
+                    <span class='text-xs text-stone-500 font-medium ml-auto'>{new Date(upload.created_at).toLocaleDateString('de-DE')}</span>
                   </div>
-                  <p class='text-sm font-bold truncate text-slate-900'>{upload.filename}</p>
+                  <a href={'/uploads/' + upload.id} class='text-sm font-bold truncate text-stone-900 hover:text-accent no-underline hover:underline'>
+                    {upload.filename}
+                  </a>
                   <UploadCaption upload={upload} />
                   <TagChips upload={upload} limit={3} />
                   <AiStatusIndicator upload={upload} />
@@ -219,6 +221,37 @@ export function ProjectDocumentsPage({
             q: q && q.length > 0 ? q : undefined,
           })} />
       )}
+
+      {/* Auto-Refresh: poll for pending uploads, reload when done */}
+      {uploads.some(u => u.type === 'image' && (u.tag_status === 'pending' || u.tag_status === 'failed')) && (() => {
+        const pendingIds = uploads
+          .filter(u => u.type === 'image' && (u.tag_status === 'pending'))
+          .map(u => u.id);
+        if (pendingIds.length === 0) return null;
+        const idsParam = pendingIds.join(',');
+        return (
+          <script dangerouslySetInnerHTML={{ __html: `
+            (function() {
+              var ids = '${idsParam}'.split(',').filter(Boolean);
+              if (!ids.length) return;
+              var timer = setInterval(function() {
+                fetch('/uploads/status?ids=' + ids.join(','))
+                  .then(function(r) { return r.json(); })
+                  .then(function(data) {
+                    var remaining = ids.filter(function(id) {
+                      return data.statuses[id] === 'pending';
+                    });
+                    if (remaining.length === 0) {
+                      clearInterval(timer);
+                      window.location.reload();
+                    }
+                  })
+                  .catch(function() {});
+              }, 4000);
+            })();
+          `}} />
+        );
+      })()}
     </Layout>
   );
 }

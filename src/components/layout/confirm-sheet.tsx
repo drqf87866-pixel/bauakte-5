@@ -12,7 +12,7 @@ export function ConfirmSheet() {
           <span class='shrink-0 w-10 h-10 rounded-full bg-error-light text-error flex items-center justify-center'>
             <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>
           </span>
-          <p class='text-base font-semibold text-slate-900 pt-1.5' data-confirm-message>Wirklich löschen?</p>
+          <p class='text-base font-semibold text-stone-900 pt-1.5' data-confirm-message>Wirklich löschen?</p>
         </div>
         <div class='flex flex-col sm:flex-row-reverse gap-2'>
           <button type='button' data-confirm-accept class='btn-danger w-full sm:w-auto'>Löschen</button>

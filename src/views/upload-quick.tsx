@@ -61,16 +61,16 @@ export function QuickUploadForm({
 
         {/* Filled in by XHR upload progress (see layout.tsx); empty/hidden otherwise */}
         <div data-upload-progress hidden class='space-y-1'>
-          <div class='h-2 rounded-full bg-slate-200 overflow-hidden'>
+          <div class='h-2 rounded-full bg-stone-200 overflow-hidden'>
             <div data-upload-progress-fill class='h-full bg-accent transition-all' style={{ width: '0%' }}></div>
           </div>
-          <p data-upload-progress-label class='text-xs text-slate-500 font-medium text-center'>Wird hochgeladen…</p>
+          <p data-upload-progress-label class='text-xs text-stone-500 font-medium text-center'>Wird hochgeladen…</p>
         </div>
 
         <Button type='submit' variant='primary' class='w-full'>Hochladen</Button>
       </form>
 
-      <p class='text-xs text-slate-500 mt-4 text-center font-medium flex items-center justify-center gap-1'>
+      <p class='text-xs text-stone-500 mt-4 text-center font-medium flex items-center justify-center gap-1'>
         Dateien werden automatisch per KI getaggt
         <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1' ry='1'/><line x1='9' y1='12' x2='15' y2='12'/><line x1='9' y1='16' x2='15' y2='16'/></svg>
       </p>
