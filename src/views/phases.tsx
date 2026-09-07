@@ -148,7 +148,7 @@ export function PhaseDetailPage({
             <div key={upload.id} class='bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col'>
               {upload.type === 'image' ? (
                 <a href={'/r2/' + upload.r2_key} target='_blank' rel='noopener'
-                  class='block' aria-label={'Foto ' + upload.filename + ' in voller Gr\u00f6\u00dfe \u00f6ffnen'}>
+                  class='block' aria-label={'Foto ' + upload.filename + ' in voller Größe öffnen'}>
                   <img src={'/r2/' + upload.r2_key}
                     alt={upload.notes ? upload.notes : upload.filename}
                     class='w-full h-32 sm:h-48 object-cover' loading='lazy'
@@ -183,8 +183,8 @@ export function PhaseDetailPage({
                   </span>
                   <form method='post' action={'/uploads/' + upload.id + '/delete'} class='inline'
                     data-confirm-delete
-                    data-confirm-message='Dieses Dokument wirklich l\u00f6schen?'>
-                    <Button type='submit' variant='danger' size='sm'>L\u00f6schen</Button>
+                    data-confirm-message='Dieses Dokument wirklich löschen?'>
+                    <Button type='submit' variant='danger' size='sm'>Löschen</Button>
                   </form>
                 </div>
               </div>
