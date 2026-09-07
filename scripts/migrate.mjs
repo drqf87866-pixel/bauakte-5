@@ -1,43 +1,24 @@
 #!/usr/bin/env node
+// CLI für `npm run db:migrate` (Remote) bzw. `npm run db:migrate -- --local`.
+//
+// Optionen:
+//   --local                          gegen die lokale D1-DB statt Remote
+//   --mark 0001_init.sql,0002_add_tags.sql   Migrationen als "bereits
+//                                    angewendet" markieren (Baseline für DBs,
+//                                    die vor diesem Runner migriert wurden)
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { runMigrations } from './migrate-core.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const migrationsDir = path.resolve(__dirname, '../migrations');
+const args = process.argv.slice(2);
+const local = args.includes('--local');
 
-if (!fs.existsSync(migrationsDir)) {
-  console.error('❌ No migrations/ directory found');
-  process.exit(1);
-}
+const markIndex = args.indexOf('--mark');
+const mark =
+  markIndex >= 0 && args[markIndex + 1]
+    ? args[markIndex + 1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
 
-const migrations = fs
-  .readdirSync(migrationsDir)
-  .filter((f) => f.endsWith('.sql'))
-  .sort();
-
-if (migrations.length === 0) {
-  console.log('✅ No migrations to run');
-  process.exit(0);
-}
-
-console.log(`📦 Found ${migrations.length} migration(s):`);
-migrations.forEach((m) => console.log(`  - ${m}`));
-
-for (const migration of migrations) {
-  const filePath = path.join(migrationsDir, migration);
-  console.log(`\n🚀 Running migration: ${migration}`);
-  try {
-    execSync(`wrangler d1 execute bauakte-5 --remote --file="${filePath}"`, {
-      stdio: 'inherit',
-    });
-    console.log(`✅ Migration ${migration} completed`);
-  } catch (err) {
-    console.error(`❌ Migration ${migration} failed`);
-    process.exit(1);
-  }
-}
-
-console.log('\n✅ All migrations completed successfully');
+runMigrations({ remote: !local, mark });

@@ -45,6 +45,9 @@ export interface Phase {
   created_at: string;
 }
 
+// AI auto-tagging status
+export type TagStatus = 'pending' | 'done' | 'failed' | 'none';
+
 // Upload
 export interface Upload {
   id: string;
@@ -57,6 +60,9 @@ export interface Upload {
   file_size: number;
   notes: string;
   tags: string;
+  ai_description: string;
+  tag_status: TagStatus;
+  tag_error: string;
   created_at: string;
 }
 

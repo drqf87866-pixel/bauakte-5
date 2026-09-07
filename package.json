@@ -15,7 +15,7 @@
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
     "db:migrate": "node scripts/migrate.mjs",
-    "db:migrate:local": "wrangler d1 execute bauakte-5 --local --file migrations/0001_init.sql && wrangler d1 execute bauakte-5 --local --file migrations/0002_add_tags.sql",
+    "db:migrate:local": "node scripts/migrate.mjs --local",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
@@ -48,6 +48,7 @@
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
-    "workerd@1.20260903.1": true
+    "workerd@1.20260903.1": true,
+    "@parcel/watcher@2.5.1": true
   }
 }

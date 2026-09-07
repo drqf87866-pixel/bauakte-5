@@ -1,5 +1,5 @@
-import type { Env } from '../db/schema';
-import { createUpload, updateUploadTags } from '../db/queries';
+import type { Env, Upload } from '../db/schema';
+import { createUpload, updateUploadAiResult } from '../db/queries';
 import { uploadFile } from './r2';
 import { analyzeImage, formatTags } from './ai-tags';
 
@@ -7,6 +7,59 @@ export interface UploadResult {
   uploadId: string;
   key: string;
   type: 'image' | 'video' | 'doc';
+}
+
+export interface AiTaggingTarget {
+  uploadId: string;
+  type: Upload['type'];
+  r2Key: string;
+  mimeType: string;
+}
+
+/**
+ * Runs AI auto-tagging for a single upload and persists the result
+ * (tags, description, status, error) in the database.
+ * Never throws – failures are recorded as tag_status='failed'.
+ */
+export async function runAiTagging(
+  env: Pick<Env, 'DB' | 'R2' | 'AI'>,
+  target: AiTaggingTarget
+): Promise<void> {
+  if (target.type !== 'image') return;
+
+  try {
+    const object = await env.R2.get(target.r2Key);
+    if (!object) {
+      await updateUploadAiResult(env.DB, target.uploadId, {
+        status: 'failed',
+        error: 'R2-Datei nicht gefunden',
+      });
+      return;
+    }
+
+    const imageBuffer = await object.arrayBuffer();
+    const result = await analyzeImage(env.AI, imageBuffer, target.mimeType);
+
+    if (!result) {
+      await updateUploadAiResult(env.DB, target.uploadId, {
+        status: 'failed',
+        error: 'Analyse konnte nicht verarbeitet werden',
+      });
+      return;
+    }
+
+    await updateUploadAiResult(env.DB, target.uploadId, {
+      tags: formatTags(result.tags),
+      description: result.description.trim().slice(0, 300),
+      status: 'done',
+    });
+  } catch (tagErr) {
+    console.error('Auto-tagging failed for upload', target.uploadId, tagErr);
+    await updateUploadAiResult(env.DB, target.uploadId, {
+      status: 'failed',
+      error: String(tagErr).slice(0, 300),
+    });
+  }
 }
 
 /**
@@ -44,21 +97,12 @@ export async function handleUpload(
   // AI auto-tagging for images — runs asynchronously after response
   if (type === 'image' && ctx) {
     ctx.waitUntil(
-      (async () => {
-        try {
-          const object = await env.R2.get(key);
-          if (object) {
-            const imageBuffer = await object.arrayBuffer();
-            const result = await analyzeImage(env.AI, imageBuffer, file.type);
-            if (result && result.tags.length > 0) {
-              const tagsStr = formatTags(result.tags);
-              await updateUploadTags(env.DB, uploadId, tagsStr);
-            }
-          }
-        } catch (tagErr) {
-          console.error('Auto-tagging failed for upload', uploadId, tagErr);
-        }
-      })(),
+      runAiTagging(env, {
+        uploadId,
+        type,
+        r2Key: key,
+        mimeType: file.type,
+      }),
     );
   }
 

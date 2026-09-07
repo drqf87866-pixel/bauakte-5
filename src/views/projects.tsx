@@ -6,6 +6,7 @@ import { InputField, TextareaField } from '../components/ui/input';
 import { Alert } from '../components/ui/alert';
 import { ProgressBar } from '../components/ui/progress-bar';
 import { Pagination } from '../components/ui/pagination';
+import { UploadCaption, TagChips } from '../components/upload/upload-meta';
 
 export function DashboardPage({
   user, projects, stats, ok,
@@ -255,7 +256,8 @@ export function ProjectDetailPage({
                 <span class="text-xs text-slate-500 font-medium ml-auto">{new Date(upload.created_at).toLocaleDateString("de-DE")}</span>
               </div>
               <p class="text-sm font-bold truncate text-slate-900">{upload.filename}</p>
-              {upload.notes && <p class="text-xs text-slate-600 mt-1 line-clamp-2">{upload.notes}</p>}
+              <UploadCaption upload={upload} />
+              <TagChips upload={upload} limit={3} />
             </div>
           </a>;
         })}

@@ -10,6 +10,9 @@ export type { NavActive };
 const FLASH_MESSAGES: Record<string, string> = {
   'uploaded': 'Dokument wurde erfolgreich hochgeladen.',
   'deleted': 'Dokument wurde gelöscht.',
+  'retagged': 'KI-Analyse wurde erneut durchgeführt.',
+  'retag-failed': 'KI-Analyse ist erneut fehlgeschlagen.',
+  'retag-not-image': 'Nur Bilder können analysiert werden.',
   'phase-completed': 'Phase wurde abgeschlossen.',
   'project-created': 'Projekt wurde angelegt.',
   'project-deleted': 'Projekt wurde gelöscht.',

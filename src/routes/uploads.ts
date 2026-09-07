@@ -2,7 +2,7 @@
 import type { Env, User } from '../db/schema';
 import { getProjectById, getPhaseById, getUploadById, deleteUpload } from '../db/queries';
 import { deleteFile } from '../lib/r2';
-import { handleUpload } from '../lib/upload';
+import { handleUpload, runAiTagging } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
 
@@ -58,6 +58,41 @@ uploadRoutes.post('/uploads/:uploadId/delete', requireAuth, async (c) => {
   await deleteUpload(c.env.DB, uploadId);
 
   return c.redirect(`/projects/${phase.project_id}/phases/${upload.phase_id}?ok=deleted`);
+});
+
+// Retry AI auto-tagging for an upload
+uploadRoutes.post('/uploads/:uploadId/retag', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const uploadId = c.req.param('uploadId')!;
+  const upload = await getUploadById(c.env.DB, uploadId);
+  if (!upload) return c.notFound();
+
+  const phase = await getPhaseById(c.env.DB, upload.phase_id);
+  if (!phase) return c.notFound();
+
+  const project = await getProjectById(c.env.DB, phase.project_id);
+  if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
+
+  const phaseUrl = `/projects/${phase.project_id}/phases/${upload.phase_id}`;
+  if (upload.type !== 'image') {
+    return c.redirect(`${phaseUrl}?error=retag-not-image`);
+  }
+
+  await runAiTagging(c.env, {
+    uploadId,
+    type: upload.type,
+    r2Key: upload.r2_key,
+    mimeType: upload.mime_type,
+  });
+
+  const updated = await getUploadById(c.env.DB, uploadId);
+  if (updated?.tag_status === 'failed') {
+    return c.redirect(`${phaseUrl}?error=retag-failed`);
+  }
+  return c.redirect(`${phaseUrl}?ok=retagged`);
 });
 
 // Serve R2 file (requires auth + project access)

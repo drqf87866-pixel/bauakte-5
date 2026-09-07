@@ -1,4 +1,4 @@
-﻿import type { User, Session, Project, Phase, Upload, ShareLink } from './schema';
+﻿import type { User, Session, Project, Phase, Upload, ShareLink, TagStatus } from './schema';
 
 // ===== Users =====
 export async function createUser(
@@ -303,11 +303,13 @@ export async function createUpload(
   fileSize: number,
   notes: string
 ): Promise<boolean> {
+  const tagStatus: TagStatus = type === 'image' ? 'pending' : 'none';
   const result = await db
     .prepare(
-      'INSERT INTO uploads (id, phase_id, user_id, filename, type, r2_key, mime_type, file_size, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      `INSERT INTO uploads (id, phase_id, user_id, filename, type, r2_key, mime_type, file_size, notes, tag_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .bind(id, phaseId, userId, filename, type, r2Key, mimeType, fileSize, notes)
+    .bind(id, phaseId, userId, filename, type, r2Key, mimeType, fileSize, notes, tagStatus)
     .run();
   return result.success;
 }
@@ -389,16 +391,31 @@ export async function deleteUpload(db: D1Database, uploadId: string): Promise<bo
   return result.success;
 }
 
-export async function updateUploadTags(
+export interface UpdateAiResultInput {
+  tags?: string;
+  description?: string;
+  status: TagStatus;
+  error?: string;
+}
+
+export async function updateUploadAiResult(
   db: D1Database,
   uploadId: string,
-  tags: string
+  result: UpdateAiResultInput
 ): Promise<boolean> {
-  const result = await db
-    .prepare('UPDATE uploads SET tags = ? WHERE id = ?')
-    .bind(tags, uploadId)
+  const changed = await db
+    .prepare(
+      'UPDATE uploads SET tags = ?, ai_description = ?, tag_status = ?, tag_error = ? WHERE id = ?'
+    )
+    .bind(
+      result.tags ?? '',
+      result.description ?? '',
+      result.status,
+      result.error ?? '',
+      uploadId
+    )
     .run();
-  return result.success;
+  return changed.success;
 }
 
 // ===== Tag Aggregation =====

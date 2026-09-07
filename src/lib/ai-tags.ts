@@ -19,6 +19,9 @@ export type AiTagResult = {
  * Analysiert ein Bild via Cloudflare Workers AI (Llama 3.2 Vision)
  * und generiert automatisch Tags und eine Beschreibung.
  * Nur für Bilder – Videos und Dokumente werden übersprungen.
+ *
+ * Wirft, wenn der AI-Aufruf fehlschlägt (Fehlermeldung fürs UI in `tag_error`).
+ * Gibt `null` zurück, wenn die Antwort nicht als JSON parsbar ist.
  */
 export async function analyzeImage(
   ai: Ai,
@@ -34,12 +37,11 @@ export async function analyzeImage(
   const base64 = arrayBufferToBase64(imageBuffer);
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
-  try {
-    const response = await ai.run(
-      '@cf/meta/llama-3.2-11b-vision-instruct',
-      {
-        image: dataUrl as string & NonNullable<unknown>,
-        prompt: `Du analysierst ein Baustellenfoto für eine Baufortschritts-Dokumentation.
+  const response = await ai.run(
+    '@cf/meta/llama-3.2-11b-vision-instruct',
+    {
+      image: dataUrl as string & NonNullable<unknown>,
+      prompt: `Du analysierst ein Baustellenfoto für eine Baufortschritts-Dokumentation.
 Antworte NUR mit einem JSON-Objekt in diesem Format, ohne zusätzlichen Text:
 {
   "tags": ["tag1", "tag2", "tag3"],
@@ -50,19 +52,15 @@ Gib 3-8 relevante deutsche Tags aus der folgenden Liste (oder sinnvolle eigene) 
 Mögliche Tags: ${CONSTRUCTION_KEYWORDS.join(', ')}
 
 Beachte: Das Foto zeigt Bauarbeiten oder Baufortschritt.`,
-      }
-    );
+    }
+  );
 
-    // Antwort parsen – sie kann als { response: string } oder direkt als Text kommen
-    const rawText = typeof response === 'object' && response !== null && 'response' in response
-      ? (response as { response: string }).response
-      : String(response);
+  // Antwort parsen – sie kann als { response: string } oder direkt als Text kommen
+  const rawText = typeof response === 'object' && response !== null && 'response' in response
+    ? (response as { response: string }).response
+    : String(response);
 
-    return parseAiResponse(rawText);
-  } catch (err) {
-    console.error('AI tagging error:', err);
-    return null;
-  }
+  return parseAiResponse(rawText);
 }
 
 function parseAiResponse(raw: string): AiTagResult | null {

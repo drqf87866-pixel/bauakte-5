@@ -1,10 +1,34 @@
 import { Layout, Flash } from './layout';
 import type { User, Project, Phase, Upload } from '../db/schema';
 import { Breadcrumb } from '../components/ui/breadcrumb';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { InputField, FileInputField } from '../components/ui/input';
 import { Pagination } from '../components/ui/pagination';
+import { UploadCaption, TagChips } from '../components/upload/upload-meta';
+
+function AiStatusIndicator({ upload }: { upload: Upload }) {
+  if (upload.type !== 'image' || upload.tag_status === 'done' || upload.tag_status === 'none') {
+    return null;
+  }
+  if (upload.tag_status === 'pending') {
+    return (
+      <div class='flex items-center gap-1.5 mt-2'>
+        <svg class='animate-spin shrink-0 text-amber-600' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
+        <span class='text-xs font-semibold text-amber-700'>Wird analysiert&hellip;</span>
+      </div>
+    );
+  }
+  return (
+    <div class='flex items-center justify-between gap-2 mt-2'>
+      <span class='text-xs font-semibold text-red-700 truncate' title={upload.tag_error || undefined}>
+        Analyse fehlgeschlagen
+      </span>
+      <form method='post' action={'/uploads/' + upload.id + '/retag'} class='inline shrink-0'>
+        <Button type='submit' variant='secondary' size='sm'>Erneut analysieren</Button>
+      </form>
+    </div>
+  );
+}
 
 export function PhaseDetailPage({
   user, project, phase, allPhases, uploads, uploadTotal, uploadPage, uploadTotalPages,
@@ -167,16 +191,9 @@ export function PhaseDetailPage({
               )}
               <div class='p-3 flex flex-col flex-1'>
                 <p class='text-sm font-bold truncate text-slate-900'>{upload.filename}</p>
-                {upload.notes && (
-                  <p class='text-xs text-slate-600 mt-1 line-clamp-2'>{upload.notes}</p>
-                )}
-                {upload.tags && (
-                  <div class='flex flex-wrap gap-1 mt-2'>
-                    {upload.tags.split(',').map((tag) => (
-                      <Badge key={tag.trim()} variant='tag'>{tag.trim()}</Badge>
-                    ))}
-                  </div>
-                )}
+                <UploadCaption upload={upload} />
+                <TagChips upload={upload} />
+                <AiStatusIndicator upload={upload} />
                 <div class='flex items-center justify-between mt-auto pt-2 gap-2'>
                   <span class='text-xs text-slate-500 font-medium'>
                     {new Date(upload.created_at).toLocaleDateString('de-DE')}

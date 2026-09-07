@@ -183,12 +183,29 @@ Environment-Variablen können im Cloudflare-Dashboard gesetzt werden:
 
 ### 4. Datenbank-Migrationen
 
-Migrationen werden **nicht** automatisch beim Deployment ausgeführt. Führe sie manuell aus, wenn neue Migrationen hinzugekommen sind:
+Migrationen werden **nicht** automatisch beim Deployment ausgeführt. Der Runner
+(`scripts/migrate-core.mjs`) legt eine Tabelle `d1_migrations` an, erfasst dort alle
+angewendeten Migrationen und führt bei jedem Lauf **nur ausstehende** aus – mehrfaches
+Ausführen ist dadurch gefahrlos.
 
 ```bash
-# Migrationen auf die Produktions-DB anwenden
+# Migrationen auf die Produktions-DB anwenden (nur ausstehende)
 npm run db:migrate
+
+# Lokal auf die Entwicklungs-DB anwenden
+npm run db:migrate:local
+
+# Upgrade-Pfad: DBs, die VOR dem Tracking-Runner migriert wurden (0001+0002 liegen
+# bereits an, aber ohne Tracking) – einmalig als Baseline markieren:
+npm run db:migrate -- --mark 0001_init.sql,0002_add_tags.sql
+# Lokal entsprechend: npm run db:migrate:local -- --mark 0001_init.sql,0002_add_tags.sql
 ```
+
+> **Hinweis:** `wrangler d1 execute` gegen die Remote-DB läuft mit dem OAuth-Token aus
+> `wrangler login` bei Datei-Importen teils in einen Auth-Fehler (Code 10000). In dem
+> Fall mit einem API-Token arbeiten: `CLOUDFLARE_API_TOKEN` setzen (Dashboard → My
+> Profile → API Tokens, z. B. Vorlage „Edit Cloudflare Workers“) und den Befehl erneut
+> ausführen.
 
 ### 5. Deployment
 
