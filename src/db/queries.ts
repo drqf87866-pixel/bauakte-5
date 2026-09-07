@@ -447,6 +447,104 @@ export async function getProjectTagSummary(
     .slice(0, 10);
 }
 
+// ===== Project-level media queries (for new project overview) =====
+export interface PhaseMediaCount {
+  phase_id: string;
+  count: number;
+}
+
+const PROJECT_PAGE_SIZE = 24;
+
+export async function getUploadsForProjectPaginated(
+  db: D1Database,
+  projectId: string,
+  options: { phaseIds?: string[]; tag?: string; page?: number }
+): Promise<{ uploads: Upload[]; total: number; page: number; totalPages: number }> {
+  const { phaseIds, tag, page = 1 } = options;
+  const offset = (page - 1) * PROJECT_PAGE_SIZE;
+
+  let whereClause = 'ph.project_id = ?';
+  const params: unknown[] = [projectId];
+
+  if (phaseIds && phaseIds.length > 0) {
+    const placeholders = phaseIds.map(() => '?').join(',');
+    whereClause += ` AND u.phase_id IN (${placeholders})`;
+    params.push(...phaseIds);
+  }
+
+  if (tag) {
+    whereClause += " AND (',' || u.tags || ',') LIKE '%,' || ? || ',%'";
+    params.push(tag);
+  }
+
+  const uploadSql = `SELECT u.* FROM uploads u JOIN phases ph ON ph.id = u.phase_id WHERE ${whereClause} ORDER BY u.created_at DESC LIMIT ? OFFSET ?`;
+  const countSql = `SELECT COUNT(*) as count FROM uploads u JOIN phases ph ON ph.id = u.phase_id WHERE ${whereClause}`;
+
+  const uploadParams = [...params, PROJECT_PAGE_SIZE, offset];
+  const countParams = [...params];
+
+  const uploadStmt = db.prepare(uploadSql).bind(...uploadParams);
+  const countStmt = db.prepare(countSql).bind(...countParams);
+
+  const [uploadResult, countResult] = await db.batch([uploadStmt, countStmt]);
+  const uploads = (uploadResult as { results: Upload[] }).results;
+  const total = ((countResult as { results?: { count: number }[] }).results?.[0]?.count) || 0;
+
+  return {
+    uploads,
+    total,
+    page,
+    totalPages: Math.ceil(total / PROJECT_PAGE_SIZE),
+  };
+}
+
+export async function getMediaCountsByPhase(db: D1Database, projectId: string): Promise<PhaseMediaCount[]> {
+  return db
+    .prepare(
+      `SELECT ph.id as phase_id, COUNT(u.id) as count
+       FROM phases ph
+       LEFT JOIN uploads u ON u.phase_id = ph.id
+       WHERE ph.project_id = ?
+       GROUP BY ph.id
+       ORDER BY ph.sort_order`
+    )
+    .bind(projectId)
+    .all<PhaseMediaCount>()
+    .then(r => r.results);
+}
+
+export async function getTagsForProject(
+  db: D1Database,
+  projectId: string,
+  phaseIds?: string[]
+): Promise<string[]> {
+  let sql = `SELECT u.tags FROM uploads u
+             JOIN phases ph ON ph.id = u.phase_id
+             WHERE ph.project_id = ? AND u.tags IS NOT NULL AND u.tags != ''`;
+  const params: unknown[] = [projectId];
+
+  if (phaseIds && phaseIds.length > 0) {
+    const placeholders = phaseIds.map(() => '?').join(',');
+    sql += ` AND u.phase_id IN (${placeholders})`;
+    params.push(...phaseIds);
+  }
+
+  const rows = await db
+    .prepare(sql)
+    .bind(...params)
+    .all<{ tags: string }>()
+    .then(r => r.results);
+
+  const tagSet = new Set<string>();
+  for (const row of rows) {
+    for (const t of row.tags.split(',')) {
+      const trimmed = t.trim();
+      if (trimmed) tagSet.add(trimmed);
+    }
+  }
+  return [...tagSet].sort();
+}
+
 // ===== Share Links =====
 export async function createShareLink(
   db: D1Database,

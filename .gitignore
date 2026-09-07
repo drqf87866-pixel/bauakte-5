@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 public/app.css
+worker-configuration.d.ts
 
 # Local development
 .local-uploads/
@@ -46,3 +47,4 @@ optimierung.md
 # Misc
 cookies.txt
 .kilo/
+.docs/

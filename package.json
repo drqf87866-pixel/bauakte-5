@@ -8,14 +8,14 @@
   },
   "scripts": {
     "dev": "npm run build:css && node scripts/dev.mjs",
-    "dev:local": "npm run dev",
     "dev:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --watch",
+    "dev:wrangler": "wrangler dev",
     "build": "npm run build:css",
     "build:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --minify",
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
     "db:migrate": "node scripts/migrate.mjs",
-    "db:migrate:local": "node scripts/migrate-local.mjs",
+    "db:migrate:local": "wrangler d1 execute bauakte-5 --local --file migrations/0001_init.sql && wrangler d1 execute bauakte-5 --local --file migrations/0002_add_tags.sql",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "typecheck": "tsc --noEmit",
@@ -31,18 +31,13 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260906.1",
     "@eslint/js": "^9.0.0",
-    "@hono/node-server": "^2.1.1",
     "@tailwindcss/cli": "^4.3.3",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "^5.0.0",
-    "better-sqlite3": "^13.0.3",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6",
-    "sharp": "^0.35.4",
     "tailwindcss": "^4.3.3",
-    "tsx": "^4.23.13",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.0.0",
     "vitest": "^5.0.0",
@@ -52,8 +47,6 @@
     "hono": "^4.13.7"
   },
   "allowScripts": {
-    "better-sqlite3@13.0.3": true,
-    "@parcel/watcher@2.5.1": true,
     "esbuild@0.28.1": true,
     "workerd@1.20260903.1": true
   }

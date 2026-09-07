@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Local dev server with hot-reload and CSS watch.
+ * Local dev server with CSS watch and wrangler dev.
  *
  * Starts two processes in parallel:
  *   1. Tailwind CSS watch (recompiles on changes to src/styles/)
- *   2. tsx watch (restarts the Hono server on TS/TSX changes)
+ *   2. wrangler dev (Cloudflare Workers local runtime)
  *
  * Usage: node scripts/dev.mjs
  *   or:  npm run dev
@@ -17,7 +17,6 @@ import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, '..');
-const port = parseInt(process.env.PORT || '3000', 10);
 
 console.log('');
 console.log('╔══════════════════════════════════════════════╗');
@@ -56,14 +55,13 @@ startProcess('CSS', 'npx', [
   '--watch',
 ]);
 
-// ── 2. Dev Server (tsx watch) ─────────────────────────────────
-startProcess('SERVER', 'npx', [
-  'tsx',
-  'watch',
-  'scripts/run-local.mts',
-], { env: { PORT: String(port), LOCAL_DEV: 'true' } });
+// ── 2. Wrangler Dev Server ────────────────────────────────────
+startProcess('WRANGLER', 'npx', [
+  'wrangler',
+  'dev',
+]);
 
-console.log(`\n📡 Dev server will be available at http://localhost:${port}\n`);
+console.log('\n📡 Dev server will be available at http://localhost:8788\n');
 console.log('⏳ Waiting for both processes to start...\n');
 
 // ── Cleanup on exit ───────────────────────────────────────────
