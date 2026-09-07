@@ -22,3 +22,7 @@ binding = "AI"
 binding = "R2"
 bucket_name = "bauakte-5-uploads"
 
+# Environment Variables
+[vars]
+ENV = { APP_TITLE = "Bauakte", PUBLIC_URL = "https://bauakte-5.drqf87866.workers.dev" }
+

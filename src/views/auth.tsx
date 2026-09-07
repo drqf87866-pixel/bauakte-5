@@ -9,7 +9,7 @@ export function LoginPage({ error, redirect }: { error: string | null; redirect?
         {error && (
           <div class='bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg mb-4 font-medium text-base'>{error}</div>
         )}
-        <form method='post' action='/login' class='space-y-4'>
+        <form method='post' action='/login' class='space-y-4' aria-label='Anmeldeformular'>
           {redirect && <input type='hidden' name='redirect' value={redirect} />}
           <div>
             <label class='block text-base font-semibold mb-2 text-slate-800' for='email'>E-Mail</label>
@@ -43,7 +43,7 @@ export function RegisterPage({ error }: { error: string | null }) {
         {error && (
           <div class='bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg mb-4 font-medium text-base'>{error}</div>
         )}
-        <form method='post' action='/register' class='space-y-4'>
+        <form method='post' action='/register' class='space-y-4' aria-label='Registrierungsformular'>
           <div>
             <label class='block text-base font-semibold mb-2 text-slate-800' for='name'>Name</label>
             <input type='text' name='name' id='name' required

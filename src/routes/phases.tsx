@@ -4,7 +4,7 @@ import {
   getProjectById,
   getPhaseById,
   getPhasesForProject,
-  getUploadsForPhase,
+  getUploadsForPhasePaginated,
   completePhase,
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
@@ -21,7 +21,8 @@ phaseRoutes.get('/:projectId/phases/:phaseId', requireAuth, async (c) => {
   const phase = await getPhaseById(c.env.DB, phaseId);
   if (!phase || phase.project_id !== projectId) return c.notFound();
   const allPhases = await getPhasesForProject(c.env.DB, projectId);
-  const uploads = await getUploadsForPhase(c.env.DB, phaseId);
+  const page = parseInt(c.req.query('page') || '1', 10);
+  const { uploads, total, totalPages } = await getUploadsForPhasePaginated(c.env.DB, phaseId, page);
   return c.html(
     <PhaseDetailPage
       user={user}
@@ -29,6 +30,9 @@ phaseRoutes.get('/:projectId/phases/:phaseId', requireAuth, async (c) => {
       phase={phase}
       allPhases={allPhases}
       uploads={uploads}
+      uploadTotal={total}
+      uploadPage={page}
+      uploadTotalPages={totalPages}
       error={c.req.query('error')}
       ok={c.req.query('ok')}
     />

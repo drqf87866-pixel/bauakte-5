@@ -1,0 +1,90 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  createUser,
+  getUserByEmail,
+  createProject,
+  getProjectsForUser,
+  getUploadsForPhase,
+  createPhasesForProject,
+} from './queries';
+
+// Create a mock D1Database
+function createMockDb(): D1Database {
+  const store = new Map<string, any[]>();
+  return {
+    prepare: vi.fn((sql: string) => {
+      const stmt = {
+        bind: vi.fn((...args: any[]) => ({
+          ...stmt,
+          boundArgs: args,
+          run: vi.fn(async () => ({ success: true, meta: {} })),
+          first: vi.fn(async <T = any>(): Promise<T | null> => {
+            const table = sql.match(/FROM\s+(\w+)/i)?.[1] || '';
+            const rows = store.get(table) || [];
+            return (rows[0] as T) ?? null;
+          }),
+          all: vi.fn(async <T = any>() => {
+            const table = sql.match(/FROM\s+(\w+)/i)?.[1] || '';
+            const rows = store.get(table) || [];
+            return { results: rows as T[], success: true };
+          }),
+        })),
+      };
+      return stmt;
+    }),
+    batch: vi.fn(async (statements: any[]) => {
+      return statements.map(() => ({ success: true, meta: {} }));
+    }),
+    exec: vi.fn(),
+    dump: vi.fn(),
+  } as unknown as D1Database;
+}
+
+describe('createUser', () => {
+  it('should insert a user successfully', async () => {
+    const db = createMockDb();
+    const result = await createUser(db, 'id-1', 'test@test.com', 'Test', 'hashed-pw');
+    expect(result).toBe(true);
+  });
+});
+
+describe('getUserByEmail', () => {
+  it('should return null for non-existent user', async () => {
+    const db = createMockDb();
+    const user = await getUserByEmail(db, 'nonexistent@test.com');
+    expect(user).toBeNull();
+  });
+});
+
+describe('createProject', () => {
+  it('should create a project successfully', async () => {
+    const db = createMockDb();
+    const result = await createProject(db, 'proj-1', 'Test Project', 'Addr', 'Desc', 'user-1');
+    expect(result).toBe(true);
+  });
+});
+
+describe('getProjectsForUser', () => {
+  it('should return empty array for user with no projects', async () => {
+    const db = createMockDb();
+    const projects = await getProjectsForUser(db, 'user-1');
+    expect(projects).toEqual([]);
+  });
+});
+
+describe('createPhasesForProject', () => {
+  it('should create multiple phases', async () => {
+    const db = createMockDb();
+    const names = ['Phase 1', 'Phase 2', 'Phase 3'] as const;
+    const result = await createPhasesForProject(db, 'proj-1', names);
+    expect(result).toBe(true);
+  });
+});
+
+describe('getUploadsForPhase', () => {
+  it('should return empty array for phase with no uploads', async () => {
+    const db = createMockDb();
+    const uploads = await getUploadsForPhase(db, 'phase-1');
+    expect(uploads).toEqual([]);
+  });
+});

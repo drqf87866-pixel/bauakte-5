@@ -3,13 +3,16 @@ import { Layout, Flash } from './layout';
 import type { User, Project, Phase, Upload } from '../db/schema';
 
 export function PhaseDetailPage({
-  user, project, phase, allPhases, uploads, error, ok,
+  user, project, phase, allPhases, uploads, uploadTotal, uploadPage, uploadTotalPages, error, ok,
 }: {
   user: User;
   project: Project;
   phase: Phase;
   allPhases: Phase[];
   uploads: Upload[];
+  uploadTotal?: number;
+  uploadPage?: number;
+  uploadTotalPages?: number;
   error?: string | null;
   ok?: string | null;
 }) {
@@ -93,6 +96,7 @@ export function PhaseDetailPage({
           action={'/projects/' + project.id + '/phases/' + phase.id + '/upload'}
           encType='multipart/form-data'
           data-upload-form
+          aria-label='Dokument hochladen'
           class='space-y-4'>
           <div>
             <label class='block text-base font-semibold mb-2 text-slate-800' for='file'>
@@ -115,7 +119,7 @@ export function PhaseDetailPage({
         </form>
       </div>
 
-      <h2 class='font-bold text-lg mb-3 text-slate-900'>Dokumente ({uploads.length})</h2>
+      <h2 class='font-bold text-lg mb-3 text-slate-900'>Dokumente ({uploadTotal ?? uploads.length})</h2>
       {uploads.length === 0 ? (
         <div class='text-center py-10 px-4 bg-white rounded-lg border border-dashed border-slate-300'>
           <svg class='mx-auto mb-3 text-slate-300' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/><circle cx='12' cy='13' r='4'/></svg>
@@ -133,7 +137,8 @@ export function PhaseDetailPage({
                   class='block' aria-label={'Foto ' + upload.filename + ' in voller Größe öffnen'}>
                   <img src={'/r2/' + upload.r2_key}
                     alt={upload.notes ? upload.notes : upload.filename}
-                    class='w-full h-32 sm:h-48 object-cover' loading='lazy' />
+                    class='w-full h-32 sm:h-48 object-cover' loading='lazy'
+                    data-img-fallback />
                 </a>
               ) : upload.type === 'video' ? (
                 <div class='w-full h-32 sm:h-48 bg-slate-100 flex items-center justify-center text-slate-500 text-sm font-medium gap-2'>
@@ -175,6 +180,25 @@ export function PhaseDetailPage({
             </div>
           ))}
         </div>
+      )}
+      {uploadTotalPages && uploadTotalPages > 1 && (
+        <nav class='flex items-center justify-center gap-2 mt-6' aria-label='Seitennavigation'>
+          {uploadPage! > 1 && (
+            <a href={'/projects/' + project.id + '/phases/' + phase.id + '?page=' + (uploadPage! - 1)}
+              class='min-h-[48px] min-w-[48px] flex items-center justify-center bg-white border rounded-lg px-4 font-semibold text-slate-700 hover:bg-slate-50 transition no-underline'>
+              ← Zurück
+            </a>
+          )}
+          <span class='text-sm text-slate-600 font-medium px-4'>
+            Seite {uploadPage} von {uploadTotalPages}
+          </span>
+          {uploadPage! < uploadTotalPages! && (
+            <a href={'/projects/' + project.id + '/phases/' + phase.id + '?page=' + (uploadPage! + 1)}
+              class='min-h-[48px] min-w-[48px] flex items-center justify-center bg-white border rounded-lg px-4 font-semibold text-slate-700 hover:bg-slate-50 transition no-underline'>
+              Weiter →
+            </a>
+          )}
+        </nav>
       )}
     </Layout>
   );

@@ -22,6 +22,33 @@ type AppEnv = {
 
 const app = new Hono<AppEnv>();
 
+// Security headers
+app.use('*', async (c, next) => {
+  await next();
+  const res = c.res;
+  const headers: Record<string, string> = {
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  };
+  // Only set CSP on HTML responses
+  if (res.headers.get('content-type')?.includes('text/html')) {
+    headers['Content-Security-Policy'] =
+      "default-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'";
+  }
+  // Cache static CSS
+  if (res.headers.get('content-type')?.includes('text/css')) {
+    headers['Cache-Control'] = 'public, max-age=3600, immutable';
+  }
+  for (const [key, value] of Object.entries(headers)) {
+    if (!res.headers.has(key)) {
+      res.headers.set(key, value);
+    }
+  }
+});
+
 // Middleware
 app.use('*', logger());
 app.use('*', cors());
@@ -50,7 +77,8 @@ app.get('/', (c) => {
 
 // 404 handler
 app.notFound((c) => {
-  return c.html(<NotFoundPage />, 404);
+  const user = c.get('user');
+  return c.html(<NotFoundPage user={user} />, 404);
 });
 
 export default app;

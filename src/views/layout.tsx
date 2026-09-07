@@ -87,11 +87,22 @@ export function Layout({
               btn.textContent = btn.getAttribute('data-loading-text') || 'Wird hochgeladen…';
             }
           });
+
+          // Image error fallback (data-img-fallback)
+          document.addEventListener('error', function(e) {
+            var img = e.target;
+            if (!img || img.tagName !== 'IMG' || !img.hasAttribute('data-img-fallback')) return;
+            img.style.display = 'none';
+            var placeholder = document.createElement('div');
+            placeholder.className = 'w-full h-32 sm:h-48 bg-slate-200 flex items-center justify-center text-slate-400';
+            placeholder.innerHTML = '<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+            img.parentNode.insertBefore(placeholder, img.nextSibling);
+          });
         `}} />
       </head>
       <body class='bg-slate-50 min-h-screen text-slate-800'>
         {/* Desktop Top Navigation */}
-        <nav class='hidden md:block bg-white shadow-sm border-b top-header'>
+        <nav class='hidden md:block bg-white shadow-sm border-b top-header' aria-label='Hauptnavigation'>
           <div class='max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4'>
             <div class='flex items-center gap-2'>
               <a href='/' class='text-xl font-bold text-slate-900 no-underline'>Bauakte</a>
@@ -113,7 +124,7 @@ export function Layout({
                   </div>
                   <form action='/logout' method='post' class='inline'>
                     <button type='submit' aria-label='Abmelden'
-                      class='min-h-[48px] min-w-[48px] flex items-center justify-center text-slate-400 hover:text-red-600 transition' title='Abmelden'>
+                      class='min-h-[48px] min-w-[48px] flex items-center justify-center text-slate-400 hover:text-red-600 transition' title='Abmelden' role='button'>
                       <svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/><polyline points='16 17 21 12 16 7'/><line x1='21' x2='9' y1='12' y2='12'/></svg>
                     </button>
                   </form>

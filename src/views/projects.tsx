@@ -44,7 +44,8 @@ export function DashboardPage({
               : 0;
             return (
               <a href={'/projects/' + project.id}
-                class='block bg-white rounded-lg shadow-sm border p-5 hover:shadow-md transition no-underline min-h-[80px]'>
+                class='block bg-white rounded-lg shadow-sm border p-5 hover:shadow-md transition no-underline min-h-[80px]'
+                aria-label={project.name + (project.address ? ', ' + project.address : '') + ' – ' + (s ? s.completedPhases + '/' + s.totalPhases + ' Phasen' : 'Neu')}>
                 <div class='flex items-start justify-between mb-2'>
                   <h2 class='text-lg font-bold text-slate-900'>{project.name}</h2>
                 </div>
@@ -182,6 +183,7 @@ export function ProjectDetailPage({
       <div class='space-y-3'>
         {phases.map((phase) => (
           <a href={'/projects/' + project.id + '/phases/' + phase.id}
+            aria-label={'Phase ' + phase.sort_order + ': ' + phase.name + (phase.status === 'completed' ? ' (Erledigt)' : ' (In Arbeit)')}
             class={'block rounded-lg shadow-sm border p-5 hover:shadow-md transition no-underline min-h-[64px] ' +
               (phase.status === 'completed' ? 'border-green-700 bg-green-50' : 'bg-white')}>
             <div class='flex items-center justify-between'>

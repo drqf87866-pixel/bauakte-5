@@ -272,6 +272,36 @@ export async function getUploadsForPhase(db: D1Database, phaseId: string): Promi
     .then(r => r.results);
 }
 
+const PAGE_SIZE = 20;
+
+export async function getUploadsForPhasePaginated(
+  db: D1Database,
+  phaseId: string,
+  page: number = 1
+): Promise<{ uploads: Upload[]; total: number; page: number; totalPages: number }> {
+  const offset = (page - 1) * PAGE_SIZE;
+  const [uploadResult, countResult] = await db.batch([
+    db.prepare('SELECT * FROM uploads WHERE phase_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?').bind(phaseId, PAGE_SIZE, offset),
+    db.prepare('SELECT COUNT(*) as count FROM uploads WHERE phase_id = ?').bind(phaseId),
+  ]);
+  const uploads = (uploadResult as any).results as Upload[];
+  const total = ((countResult as any).results?.[0]?.count as number) || 0;
+  return {
+    uploads,
+    total,
+    page,
+    totalPages: Math.ceil(total / PAGE_SIZE),
+  };
+}
+
+export async function countUploadsForPhase(db: D1Database, phaseId: string): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) as count FROM uploads WHERE phase_id = ?')
+    .bind(phaseId)
+    .first<{ count: number }>();
+  return row?.count || 0;
+}
+
 export async function getUploadById(db: D1Database, uploadId: string): Promise<Upload | null> {
   return db
     .prepare('SELECT * FROM uploads WHERE id = ?')

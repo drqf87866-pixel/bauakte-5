@@ -1,284 +1,139 @@
-# Optimierungsanalyse: Bauakte
+# Optimierungsanalyse: Bauakte (v5)
+
+> **Hinweis:** Diese Analyse wurde am 07.09.2026 auf den aktuellen Stand gebracht.
+> Das Projekt ist eine **Cloudflare Workers + Hono** Full-Stack-Anwendung (kein React SPA mehr).
 
 ## 📋 Projektüberblick
 
-**Bauakte** ist eine React-basierte Single-Page-Anwendung zur Verwaltung von Bauprojekten. Sie bietet:
-- Eine Übersicht aller Bauprojekte mit Such- und Filterfunktion
-- Detaillierte Projektansichten mit Phasen, Aufgaben und Checklisten
-- Eine Bildergalerie für Baufortschrittsfotos
+**Bauakte** ist eine Cloudflare-basierte Webapp zur Verwaltung von Bauprojekten mit:
+- Authentifizierung (Login/Register mit Session-Management)
+- Dashboard mit allen Bauprojekten und Fortschrittsanzeige
+- 8 standardisierte Bauphasen pro Projekt (Rohbau, Dach & Fassade, etc.)
+- Dokumentenupload (Bilder, Videos, PDFs) mit R2-Speicher
+- KI-gestützte automatische Bild-Tagging (Llama 3.2 Vision)
+- Projekt-Sharing über Einladungslinks
+- Mobile-First responsives Design
 
 **Tech-Stack:**
-- React 19 + TypeScript
-- Vite 6 (Build-Tool)
-- Tailwind CSS (v3 Config, aber v4 als Dependency)
-- Kein Routing (Single Page), kein State-Management (nur React useState)
-- Keine Tests, kein Backend (alles hartcodierte Daten)
+- Cloudflare Workers (Runtime)
+- Hono v4 (Framework, serverseitiges JSX)
+- Tailwind CSS v4 (CSS-first Config)
+- TypeScript v7 (strict mode)
+- D1 Database (SQLite)
+- R2 Object Storage
+- Cloudflare Workers AI
+- Vitest (Tests)
 
 ---
 
-## 🔍 Gefundene Optimierungspotenziale
+## ✅ Bereits erledigt (kein Handlungsbedarf)
 
-Nach Priorität sortiert (H = Hoch, M = Mittel, N = Niedrig):
-
----
-
-### H1: Tailwind CSS v3 Config mit v4 Dependency
-
-**Problem:** `package.json` deklariert `"tailwindcss": "^4.0.0"`, aber `tailwind.config.js` verwendet die v3-Syntax (`content` array, `theme.extend`). Tailwind v4 verwendet ein radikal anderes Konfigurationssystem (CSS-first Config, `@import "tailwindcss"`, kein tailwind.config.js mehr nötig).
-
-**Betroffene Dateien:** `package.json`, `tailwind.config.js`, `postcss.config.js`, `src/index.css`
-
-**Vorschlag:**
-- Entweder: Tailwind auf v4 migrieren (CSS-first Config, `@theme` Direktiven)
-- Oder: Tailwind auf v3.x fixieren (`"tailwindcss": "^3.4.0"`)
-- **Empfehlung:** Auf v4 migrieren, da es zukunftssicherer ist
-
-**Aufwand:** Mittel (~30 Min)
+- **H1 (Tailwind v3/v4)** — Bereits auf v4.3.3 mit CSS-first Config
+- **M6 (TypeScript strict)** — `"strict": true` bereits aktiv
 
 ---
 
-### H2: Fehlende Persistenz – Checklisten-Änderungen gehen verloren
+## ✅ Umgesetzte Optimierungen (07.09.2026)
 
-**Problem:** In `Checklist.tsx` werden Tasks als `completed` markiert, aber diese Änderungen werden nirgendwo gespeichert – bei einem Reload sind alle Änderungen weg. Die App hat kein Backend und keinen localStorage.
+### Phase 1: Quick Wins
 
-**Betroffene Dateien:** `src/components/Checklist.tsx`
+#### 1. Bildoptimierung (N2) — Erledigt
+- `loading="lazy"` auf Galerie-Bildern (war bereits vorhanden)
+- `onerror`-Fallback für fehlgeschlagene Bilder (globaler Event-Listener)
+- `object-fit: cover` für konsistente Darstellung
 
-**Vorschlag:**
-- localStorage als einfache Persistenz-Lösung einbauen
-- Checklist-Status pro Projekt speichern (z.B. `bauakte-checklist-{projectId}`)
-- Alternativ: Einen einfachen Custom Hook `usePersistedState` erstellen
+**Dateien:** `src/views/layout.tsx` (globaler img-error-Handler), `src/views/phases.tsx` (data-img-fallback)
 
-**Aufwand:** Gering (~15 Min)
+#### 2. Fehlerbehandlung (H3) — Erledigt
+- 404-Seite benutzerfreundlicher gestaltet (zeigt `user`-Prop für korrekte Navigation)
+- Bild-Fallback bei fehlgeschlagenem Laden
+- Defensives Rendering (Flash-Nachrichten für alle wichtigen Aktionen)
 
----
+**Dateien:** `src/views/not-found.tsx`, `src/index.tsx`
 
-### H3: Fehlende Fehlerbehandlung
+#### 3. Umgebungsvariablen (N4) — Erledigt
+- `.env.example` mit Platzhalterwerten
 
-**Problem:** Es gibt keinen ErrorBoundary, kein Loading State, keine Fehlerbehandlung für:
-- Bild laden fehlgeschlagen (`ImageGallery.tsx`, `ImageModal.tsx`)
-- Kein `Suspense`-Boundary
-- Kein try/catch für potenzielle Operationen
+**Dateien:** `.env.example`
 
-**Betroffene Dateien:** `src/App.tsx`, `src/components/ImageGallery.tsx`, `src/components/ImageModal.tsx`
+### Phase 2: Code-Qualität
 
-**Vorschlag:**
-- ErrorBoundary-Komponente um die App wrappen
-- `onError`-Handler für Bilder (`onError={(e) => e.currentTarget.src = '/fallback.png'}`)
-- Ladezustände für asynchrone Operationen vorbereiten
+#### 4. ESLint + Prettier (N1) — Erledigt
+- ESLint (Flat Config) mit TypeScript-Regeln
+- Prettier-Konfiguration (single quote, trailing commas)
+- `lint`- und `format`-Scripts in package.json
 
-**Aufwand:** Gering (~20 Min)
+**Dateien:** `eslint.config.js`, `.prettierrc`, `package.json`
 
----
+#### 5. Barrierefreiheit (M3) — Erledigt
+- `aria-label` für Dashboard-Projektkarten und Phasen-Links
+- `aria-label` für Upload-Formular, Login/Register-Formulare
+- `aria-current="page"` für aktive Navigation (war bereits vorhanden)
+- `role="progressbar"` mit `aria-valuenow` (war bereits vorhanden)
+- `role="navigation"` und `aria-label` für Nav-Elemente
+- Screenreader-Texte für interaktive Elemente
 
-### H4: Duplizierte Filterlogik
+**Dateien:** `src/views/layout.tsx`, `src/views/projects.tsx`, `src/views/auth.tsx`, `src/views/phases.tsx`
 
-**Problem:** Die Filterlogik existiert an mehreren Stellen:
-1. Inline in `App.tsx` (Projects nach `searchQuery` und `filterStatus` filtern)
-2. Inline in `Sidebar.tsx` (nochmalige Filterung)
-3. Als Custom Hook in `Hooks.tsx` (`useProjectFilter`), der aber nicht verwendet wird
+### Phase 3: Infrastruktur
 
-**Betroffene Dateien:** `src/App.tsx`, `src/components/Sidebar.tsx`, `src/components/Hooks.tsx`
+#### 6. Tests (M5) — Erledigt
+- Vitest als Test-Runner
+- 3 Testdateien mit 25 Tests (alle bestanden)
+- Unit-Tests für `validators.ts` (E-Mail, Pflichtfelder, Projekt/Login/Registrierung)
+- Unit-Tests für `avatar.ts` (Initialen, deterministische Farben)
+- Mock-basierte Tests für `queries.ts` (CRUD-Operationen)
 
-**Vorschlag:**
-- Den existierenden `useProjectFilter`-Hook aus `Hooks.tsx` verwenden
-- Oder die Filterlogik komplett nach App.tsx ziehen und nur die gefilterte Liste per Props weitergeben
-- Sidebar sollte nur noch die bereits gefilterte Liste bekommen
+**Dateien:** `vitest.config.ts`, `src/lib/validators.test.ts`, `src/lib/avatar.test.ts`, `src/db/queries.test.ts`
 
-**Aufwand:** Gering (~10 Min)
+#### 7. Security Headers (S1) — Erledigt
+- CSP: `default-src 'self'`, `img-src 'self' https:`, etc.
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Strict-Transport-Security: max-age=31536000`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (Kamera, Mikrofon, Geo blockiert)
+- Header werden nur gesetzt, wenn noch nicht vorhanden
 
----
+**Dateien:** `src/index.tsx`
 
-### M1: Keine Performance-Optimierungen
+#### 8. Cache-Optimierung (S2) — Erledigt
+- Cache-Header für CSS: `public, max-age=3600, immutable`
+- Teil der Security-Headers-Middleware
 
-**Problem:**
-- `useMemo` fehlt für die gefilterte Projektliste in `App.tsx`
-- `useCallback` fehlt für Event-Handler
-- Kein `React.memo` für Komponenten, die häufig neu rendern (StatusBadge, ProgressBar, SearchBar)
+**Dateien:** `src/index.tsx`
 
-**Betroffene Dateien:** `src/App.tsx` und alle Komponenten
+### Phase 4: Performance & Skalierung
 
-**Vorschlag:**
-- `useMemo` für die gefilterte Liste (verhindert Neuberechnung bei jedem Render)
-- `React.memo` für kleine, häufig gerenderte Komponenten (StatusBadge, ProgressBar, EmptyState)
-- `useCallback` für Event-Handler, die als Props weitergegeben werden
+#### 9. Paginierung (S3) — Erledigt
+- `getUploadsForPhasePaginated` mit `LIMIT ? OFFSET ?` (20 pro Seite)
+- `countUploadsForPhase` für Gesamtanzahl
+- Seitennavigation (Zurück/Weiter) mit Seitenanzeige
+- `?page=` Query-Parameter in der Route
 
-**Aufwand:** Gering (~15 Min)
-
----
-
-### M2: Kein Lazy Loading / Code Splitting
-
-**Problem:** Alle Komponenten werden in einem Bundle geladen, obwohl sie nicht alle gleichzeitig sichtbar sind. Besonders `ImageModal.tsx` wird erst bei Benutzerinteraktion benötigt.
-
-**Betroffene Dateien:** `src/App.tsx`
-
-**Vorschlag:**
-- `React.lazy()` für `ImageModal.tsx` (wird erst bei Klick gebraucht)
-- `React.lazy()` für `ProjectDetails.tsx` und `ImageGallery.tsx` (werden erst bei Projektauswahl gebraucht)
-- `<Suspense>` mit Fallback in App.tsx
-
-**Aufwand:** Gering (~15 Min)
+**Dateien:** `src/db/queries.ts`, `src/routes/phases.tsx`, `src/views/phases.tsx`
 
 ---
 
-### M3: Keine Barrierefreiheit (A11y)
+## 📊 Zusammenfassung
 
-**Problem:**
-- Keine ARIA-Attribute (z.B. `aria-label` für SearchBar, FilterBar)
-- Keine Tastaturnavigation (Modal kann nicht mit Tab geschlossen werden)
-- Keine `role`-Attribute für interaktive Elemente
-- Kein `sr-only` für Screenreader-Texte
-
-**Betroffene Dateien:** Alle Komponenten
-
-**Vorschlag:**
-- `aria-label` für SearchBar und FilterBar hinzufügen
-- `role="dialog"` und `aria-modal="true"` für ImageModal
-- Tastaturunterstützung für Modal (Escape ist schon da, Tab-Fokus fehlt)
-- `role="progressbar"` für ProgressBar mit `aria-valuenow`
-
-**Aufwand:** Mittel (~30 Min)
-
----
-
-### M4: Ineffizientes State-Management
-
-**Problem:** `App.tsx` hat drei `useState`-Hooks, aber die Daten fließen nur von oben nach unten. Das ist für die aktuelle Größe okay, aber:
-- Keine zentrale State-Verwaltung (Context, Zustand, etc.)
-- Props werden durch mehrere Ebenen durchgereicht (Prop Drilling)
-- `selectedProject` wird von mehreren Komponenten indirekt beeinflusst
-
-**Betroffene Dateien:** `src/App.tsx`
-
-**Vorschlag:**
-- Für die aktuelle Größe reicht `useState` – aber bei Erweiterung auf React Context umsteigen
-- Alternativ: Zustand oder Jotai für skalierbares State-Management
-- **Vorläufig:** Keine Änderung nötig, nur als Beobachtung festhalten
-
-**Aufwand:** Keiner (Beobachtung)
-
----
-
-### M5: Keine Tests
-
-**Problem:** Keine Test-Frameworks in `package.json`, keine Test-Dateien im Projekt.
-
-**Vorschlag:**
-- Vitest + React Testing Library aufsetzen
-- Unit-Tests für die Filterlogik (`useProjectFilter`)
-- Komponententests für StatusBadge, ProgressBar, SearchBar
-- Einen einfachen Smoke-Test für App.tsx
-
-**Aufwand:** Hoch (~2h)
-
----
-
-### M6: TypeScript könnte strikter sein
-
-**Problem:**
-- `tsconfig.json` hat `"strict": false` (kein strict mode)
-- `filterStatus` in App.tsx ist `string` statt `'all' | 'active' | 'completed' | 'on-hold'`
-- `searchQuery` ist `string` statt `string | undefined`
-
-**Betroffene Dateien:** `tsconfig.json`, `src/App.tsx`
-
-**Vorschlag:**
-- `"strict": true` in tsconfig.json aktivieren
-- Engere Typen für Filter-Status verwenden
-- TypeScript-Errors nach Aktivierung von strict mode fixen
-
-**Aufwand:** Mittel (~30 Min)
-
----
-
-### N1: Kein ESLint / Prettier Setup
-
-**Problem:** Keine Linter- oder Formatter-Konfiguration im Projekt. Der Code hat inkonsistente Formatierung.
-
-**Vorschlag:**
-- ESLint mit React + TypeScript Regeln aufsetzen
-- Prettier mit konsistenten Regeln
-- Husky + lint-staged für Pre-Commit-Hooks
-
-**Aufwand:** Mittel (~30 Min)
-
----
-
-### N2: Bildoptimierung
-
-**Problem:**
-- Bilder in `ImageGallery.tsx` werden ohne Optimierung geladen
-- Kein Lazy Loading (`loading="lazy"` fehlt)
-- Kein Fallback-Bild bei Fehlern
-- Keine responsiven Bildgrößen (srcset)
-
-**Betroffene Dateien:** `src/components/ImageGallery.tsx`, `src/components/ImageModal.tsx`
-
-**Vorschlag:**
-- `loading="lazy"` für Galerie-Bilder
-- `onError`-Fallback für alle Bilder
-- CSS `object-fit: cover` für konsistente Bilddarstellung
-
-**Aufwand:** Gering (~10 Min)
-
----
-
-### N3: Hooks.tsx ist falsch benannt
-
-**Problem:** Die Datei heißt `Hooks.tsx` (mit `.tsx` statt `.ts`), obwohl sie kein JSX enthält – nur einen Custom Hook.
-
-**Betroffene Dateien:** `src/components/Hooks.tsx`
-
-**Vorschlag:**
-- Nach `src/hooks/useProjectFilter.ts` verschieben (`.ts` statt `.tsx`)
-- Importe in allen Dateien aktualisieren
-
-**Aufwand:** Gering (~5 Min)
-
----
-
-### N4: Keine Umgebungsvariablen
-
-**Problem:** Es gibt keine `.env`-Dateien und keine Verwendung von `import.meta.env`. Die App ist nicht konfigurierbar.
-
-**Vorschlag:**
-- `.env.example` anlegen mit möglichen Konfigurationswerten
-- `VITE_APP_TITLE` für den Seitentitel
-- Vorbereitung für zukünftige API-URL
-
-**Aufwand:** Gering (~5 Min)
-
----
-
-## 📊 Zusammenfassung der Prioritäten
-
-| Prio | Thema | Aufwand | Impact |
+| Prio | Thema | Aufwand | Status |
 |------|-------|---------|--------|
-| H1 | Tailwind v3 vs v4 | ~30 Min | Build-Stabilität |
-| H2 | Checklist-Persistenz | ~15 Min | User Experience |
-| H3 | Fehlerbehandlung | ~20 Min | Robustheit |
-| H4 | Duplizierte Filterlogik | ~10 Min | Code-Qualität |
-| M1 | Performance (useMemo/memo) | ~15 Min | Performance |
-| M2 | Lazy Loading | ~15 Min | Ladezeit |
-| M3 | Barrierefreiheit | ~30 Min | Accessibility |
-| M4 | State-Management | – | Beobachtung |
-| M5 | Tests | ~2h | Qualitätssicherung |
-| M6 | TypeScript strict | ~30 Min | Typsicherheit |
-| N1 | ESLint/Prettier | ~30 Min | Code-Qualität |
-| N2 | Bildoptimierung | ~10 Min | UX/Performance |
-| N3 | Hooks-Datei umbenennen | ~5 Min | Code-Organisation |
-| N4 | Umgebungsvariablen | ~5 Min | Konfigurierbarkeit |
+| N2 | Bildoptimierung | ~10 Min | ✅ Erledigt |
+| H3 | Fehlerbehandlung | ~15 Min | ✅ Erledigt |
+| N4 | Umgebungsvariablen | ~5 Min | ✅ Erledigt |
+| N1 | ESLint/Prettier | ~20 Min | ✅ Erledigt |
+| M3 | Barrierefreiheit | ~20 Min | ✅ Erledigt |
+| M5 | Tests (Vitest) | ~45 Min | ✅ Erledigt (25 Tests) |
+| S1 | Security Headers | ~10 Min | ✅ Erledigt |
+| S2 | Cache-Optimierung | ~5 Min | ✅ Erledigt |
+| S3 | Paginierung | ~30 Min | ✅ Erledigt |
+| **Gesamt** | | **~2,5h** | **✅ 9/9 umgesetzt** |
 
----
+## Verifikation
 
-## 💡 Empfohlene Reihenfolge der Umsetzung
-
-1. **Tailwind-Konfiguration fixen** (H1) – Grundlage für alles Weitere
-2. **Duplizierte Filterlogik entfernen** (H4) – Kleiner, schneller Fix
-3. **Fehlerbehandlung** (H3) + **Bildoptimierung** (N2) – Sofortige Verbesserung
-4. **Checklist-Persistenz** (H2) – Größter UX-Gewinn
-5. **Performance-Optimierungen** (M1) + **Lazy Loading** (M2)
-6. **TypeScript strict mode** (M6) – Typen bereinigen
-7. **Barrierefreiheit** (M3)
-8. **ESLint/Prettier** (N1) + **Hooks umbenennen** (N3) + **Env-Vars** (N4)
-9. **Tests** (M5) – Fundament für zukünftige Entwicklung
+- ✅ `npx vitest run` — 25 Tests bestanden
+- ✅ `npx tsc --noEmit` — keine TypeScript-Fehler
+- ✅ `npm run build` — Tailwind CSS kompiliert
+- ✅ `npm run lint` — ESLint ohne Fehler
+- ✅ `npm run format` — Prettier-Formatierung verfügbar
