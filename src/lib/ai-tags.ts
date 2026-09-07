@@ -15,17 +15,32 @@ export type AiTagResult = {
   description: string;
 };
 
+type AnalyzeImageEnv = {
+  AI: Ai;
+  IMAGES: ImagesBinding;
+};
+
+// Bilder größer als 20 MB (Input-Limit des Images-Bindings) werden nicht analysiert.
+export const MAX_AI_IMAGE_BYTES = 20 * 1024 * 1024;
+const AI_IMAGE_MAX_DIMENSION = 1024;
+const AI_IMAGE_QUALITY = 80;
+
 /**
  * Analysiert ein Bild via Cloudflare Workers AI (Llama 3.2 Vision)
  * und generiert automatisch Tags und eine Beschreibung.
  * Nur für Bilder – Videos und Dokumente werden übersprungen.
  *
- * Wirft, wenn der AI-Aufruf fehlschlägt (Fehlermeldung fürs UI in `tag_error`).
+ * Vor der Analyse wird das Bild über das Images-Binding auf maximal 1024px
+ * verkleinert (läuft im Images-Service, nicht im Worker-CPU-Budget).
+ * Das hält das CPU-Limit (Free-Plan: 10 ms) ein und beschleunigt die KI-Antwort.
+ *
+ * Wirft bei fehlgeschlagener Bild-Aufbereitung oder fehlgeschlagenem AI-Aufruf
+ * (Fehlermeldung fürs UI in `tag_error`).
  * Gibt `null` zurück, wenn die Antwort nicht als JSON parsbar ist.
  */
 export async function analyzeImage(
-  ai: Ai,
-  imageBuffer: ArrayBuffer,
+  env: AnalyzeImageEnv,
+  imageStream: ReadableStream<Uint8Array>,
   mimeType: string
 ): Promise<AiTagResult | null> {
   // Nur Bilder verarbeiten
@@ -33,11 +48,14 @@ export async function analyzeImage(
     return null;
   }
 
-  // Bild als Base64 für das AI-Modell kodieren
-  const base64 = arrayBufferToBase64(imageBuffer);
-  const dataUrl = `data:${mimeType};base64,${base64}`;
+  // Bild für die KI verkleinern und als JPEG ausgeben
+  const buffer = await downscaleForAnalysis(env.IMAGES, imageStream);
 
-  const response = await ai.run(
+  // Bild als Base64 für das AI-Modell kodieren
+  const base64 = arrayBufferToBase64(buffer);
+  const dataUrl = `data:image/jpeg;base64,${base64}`;
+
+  const response = await env.AI.run(
     '@cf/meta/llama-3.2-11b-vision-instruct',
     {
       image: dataUrl as string & NonNullable<unknown>,
@@ -63,6 +81,25 @@ Beachte: Das Foto zeigt Bauarbeiten oder Baufortschritt.`,
   return parseAiResponse(rawText);
 }
 
+async function downscaleForAnalysis(
+  images: ImagesBinding,
+  imageStream: ReadableStream<Uint8Array>
+): Promise<ArrayBuffer> {
+  try {
+    const result = await images
+      .input(imageStream)
+      .transform({
+        width: AI_IMAGE_MAX_DIMENSION,
+        height: AI_IMAGE_MAX_DIMENSION,
+        fit: 'scale-down',
+      })
+      .output({ format: 'image/jpeg', quality: AI_IMAGE_QUALITY });
+    return await result.response().arrayBuffer();
+  } catch {
+    throw new Error('Bild konnte nicht für die KI-Analyse aufbereitet werden (Format wird evtl. nicht unterstützt).');
+  }
+}
+
 function parseAiResponse(raw: string): AiTagResult | null {
   try {
     // JSON aus der Antwort extrahieren (falls noch Text drumherum ist)
@@ -78,11 +115,12 @@ function parseAiResponse(raw: string): AiTagResult | null {
   }
 }
 
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.byteLength; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
   }
   return btoa(binary);
 }

@@ -20,6 +20,9 @@
   "ai": {
     "binding": "AI"
   },
+  "images": {
+    "binding": "IMAGES"
+  },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS"

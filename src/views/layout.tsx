@@ -25,7 +25,7 @@ const FLASH_MESSAGES: Record<string, string> = {
   'link-deactivated': 'Einladungslink wurde deaktiviert.',
   'notes-saved': 'Notiz wurde gespeichert.',
   'tags-saved': 'Tags wurden gespeichert.',
-  'batch-analyzed': 'Ausstehende Bilder wurden analysiert.',
+  'batch-analyzed': 'KI-Analyse für ausstehende Bilder wurde gestartet – Fortschritt wird automatisch aktualisiert.',
   'no-file': 'Bitte wähle zuerst eine Datei aus.',
   'upload-failed': 'Upload fehlgeschlagen. Bitte versuche es erneut.',
   'missing-fields': 'Bitte Projekt, Bauphase und Datei angeben.',

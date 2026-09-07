@@ -327,10 +327,10 @@ export async function createUpload(
   const tagStatus: TagStatus = type === 'image' ? 'pending' : 'none';
   const result = await db
     .prepare(
-      `INSERT INTO uploads (id, phase_id, user_id, filename, type, r2_key, mime_type, file_size, notes, tags, tag_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO uploads (id, phase_id, user_id, filename, type, r2_key, mime_type, file_size, notes, tags, manual_tags, ai_tags, tag_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .bind(id, phaseId, userId, filename, type, r2Key, mimeType, fileSize, notes, initialTags, tagStatus)
+    .bind(id, phaseId, userId, filename, type, r2Key, mimeType, fileSize, notes, initialTags, initialTags, '', tagStatus)
     .run();
   return result.success;
 }
@@ -414,6 +414,7 @@ export async function deleteUpload(db: D1Database, uploadId: string): Promise<bo
 
 export interface UpdateAiResultInput {
   tags?: string;
+  aiTags?: string;
   description?: string;
   status: TagStatus;
   error?: string;
@@ -426,10 +427,11 @@ export async function updateUploadAiResult(
 ): Promise<boolean> {
   const changed = await db
     .prepare(
-      'UPDATE uploads SET tags = ?, ai_description = ?, tag_status = ?, tag_error = ? WHERE id = ?'
+      'UPDATE uploads SET tags = ?, ai_tags = ?, ai_description = ?, tag_status = ?, tag_error = ? WHERE id = ?'
     )
     .bind(
       result.tags ?? '',
+      result.aiTags ?? '',
       result.description ?? '',
       result.status,
       result.error ?? '',
@@ -711,4 +713,83 @@ export async function isCollaborator(
     .bind(projectId, userId)
     .first();
   return row !== null;
+}
+
+// ===== Upload Editing =====
+export async function updateUploadTags(
+  db: D1Database,
+  uploadId: string,
+  manualTags: string,
+  mergedTags: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE uploads SET manual_tags = ?, tags = ? WHERE id = ?')
+    .bind(manualTags, mergedTags, uploadId)
+    .run();
+  return result.success;
+}
+
+export async function updateUploadNotes(
+  db: D1Database,
+  uploadId: string,
+  notes: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE uploads SET notes = ? WHERE id = ?')
+    .bind(notes, uploadId)
+    .run();
+  return result.success;
+}
+
+// ===== Batch / Pending Uploads =====
+export async function getPendingUploadsForProject(
+  db: D1Database,
+  projectId: string,
+  limit: number = 20
+): Promise<Upload[]> {
+  return db
+    .prepare(
+      `SELECT u.* FROM uploads u
+       JOIN phases ph ON ph.id = u.phase_id
+       WHERE ph.project_id = ? AND u.type = 'image' AND u.tag_status IN ('pending', 'failed')
+       ORDER BY u.created_at DESC LIMIT ?`
+    )
+    .bind(projectId, limit)
+    .all<Upload>()
+    .then(r => r.results);
+}
+
+// ===== KI Insights =====
+export interface TopTagItem {
+  tag: string;
+  count: number;
+}
+
+export async function getTopTagsForProject(
+  db: D1Database,
+  projectId: string,
+  limit: number = 5
+): Promise<TopTagItem[]> {
+  const rows = await db
+    .prepare(
+      `SELECT u.tags FROM uploads u
+       JOIN phases ph ON ph.id = u.phase_id
+       WHERE ph.project_id = ? AND u.tags IS NOT NULL AND u.tags != ''`
+    )
+    .bind(projectId)
+    .all<{ tags: string }>()
+    .then(r => r.results);
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    for (const raw of row.tags.split(',')) {
+      const t = raw.trim();
+      if (!t) continue;
+      counts.set(t, (counts.get(t) || 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limit)
+    .map(([tag, count]) => ({ tag, count }));
 }

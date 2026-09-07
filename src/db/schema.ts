@@ -4,6 +4,7 @@ export interface Env {
   R2: R2Bucket;
 
   AI: Ai;
+  IMAGES: ImagesBinding;
 }
 
 // User
@@ -60,7 +61,9 @@ export interface Upload {
   mime_type: string;
   file_size: number;
   notes: string;
-  tags: string;
+  tags: string;        // gemerged (manual_tags ∪ ai_tags), backward-kompatibel
+  manual_tags: string; // vom Nutzer eingegebene/bearbeitete Tags
+  ai_tags: string;     // von KI generierte Tags
   ai_description: string;
   tag_status: TagStatus;
   tag_error: string;

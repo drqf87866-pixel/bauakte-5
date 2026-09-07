@@ -1,13 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runAiTagging } from './upload';
+import { MAX_AI_IMAGE_BYTES } from './ai-tags';
 
 interface CapturedUpdate {
   sql: string;
   args: unknown[];
 }
 
-function createMockEnv() {
+function streamOf(bytes: number[]): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(bytes));
+      controller.close();
+    },
+  });
+}
+
+function createMockEnv(overrides?: { dbFirst?: () => Promise<unknown> }) {
   const updates: CapturedUpdate[] = [];
+  const dbFirst = overrides?.dbFirst || (async () => null);
   const db = {
     prepare: (sql: string) => {
       const stmt = {
@@ -15,7 +26,7 @@ function createMockEnv() {
           if (sql.trim().startsWith('UPDATE uploads')) updates.push({ sql, args });
           return {
             run: async () => ({ success: true, meta: {} }),
-            first: async () => null,
+            first: dbFirst,
             all: async () => ({ results: [], success: true }),
           };
         },
@@ -31,6 +42,23 @@ function createMockEnv() {
 
   const run = vi.fn<(...args: unknown[]) => Promise<{ response?: string }>>();
 
+  // Images-Binding-Mock: downscales to a tiny "jpeg" and returns it unchanged.
+  const chain = {
+    transform: vi.fn(() => chain),
+    output: vi.fn(async () => ({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    })),
+  };
+  const images = {
+    input: vi.fn(() => chain),
+    hosted: {
+      image: vi.fn(),
+      upload: vi.fn(),
+      list: vi.fn(),
+      createDirectUpload: vi.fn(),
+    },
+  };
+
   return {
     db: db as unknown as D1Database,
     updates,
@@ -40,16 +68,20 @@ function createMockEnv() {
       DB: db as unknown as D1Database,
       R2: { get } as unknown as R2Bucket,
       AI: { run } as unknown as Ai,
+      IMAGES: images as unknown as ImagesBinding,
     },
   };
 }
 
+const r2Object = (size: number) => ({
+  size,
+  body: streamOf([1, 2, 3]),
+});
+
 describe('runAiTagging', () => {
-  it('persists tags, description and status done on success', async () => {
+  it('persists tags, ai_tags, description and status done on success', async () => {
     const { env, updates, get, run } = createMockEnv();
-    get.mockResolvedValue({
-      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-    });
+    get.mockResolvedValue(r2Object(10));
     run.mockResolvedValue({
       response: JSON.stringify({
         tags: ['Beton', 'Rohbau', 'Dach'],
@@ -66,17 +98,17 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[0]).toBe('beton, rohbau, dach');
-    expect(last.args[1]).toBe('Betonarbeiten am Rohbau');
-    expect(last.args[2]).toBe('done');
-    expect(last.args[3]).toBe('');
+    // args: [tags, ai_tags, ai_description, tag_status, tag_error]
+    expect(last.args[0]).toBe('beton, rohbau, dach');  // merged tags
+    expect(last.args[1]).toBe('beton, rohbau, dach');  // ai_tags
+    expect(last.args[2]).toBe('Betonarbeiten am Rohbau'); // ai_description
+    expect(last.args[3]).toBe('done');                  // tag_status
+    expect(last.args[4]).toBe('');                      // tag_error
   });
 
   it('marks upload as failed when the AI call throws', async () => {
     const { env, updates, get, run } = createMockEnv();
-    get.mockResolvedValue({
-      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-    });
+    get.mockResolvedValue(r2Object(10));
     run.mockRejectedValue(new Error('workers ai unavailable'));
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -90,17 +122,16 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[2]).toBe('failed');
-    expect(last.args[3]).toContain('workers ai unavailable');
+    // args: [tags, ai_tags, ai_description, tag_status, tag_error]
+    expect(last.args[3]).toBe('failed');
+    expect(last.args[4]).toContain('workers ai unavailable');
 
     consoleSpy.mockRestore();
   });
 
   it('marks upload as failed when the response cannot be parsed', async () => {
     const { env, updates, get, run } = createMockEnv();
-    get.mockResolvedValue({
-      arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer,
-    });
+    get.mockResolvedValue(r2Object(10));
     run.mockResolvedValue({ response: 'kein JSON hier' });
 
     await runAiTagging(env, {
@@ -112,7 +143,7 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[2]).toBe('failed');
+    expect(last.args[3]).toBe('failed');
   });
 
   it('marks upload as failed when the R2 object is missing', async () => {
@@ -128,8 +159,25 @@ describe('runAiTagging', () => {
 
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
-    expect(last.args[2]).toBe('failed');
-    expect(last.args[3]).toContain('R2');
+    expect(last.args[3]).toBe('failed');
+    expect(last.args[4]).toContain('R2');
+  });
+
+  it('skips analysis (failed with hint) for images above the size limit', async () => {
+    const { env, updates, get } = createMockEnv();
+    get.mockResolvedValue(r2Object(MAX_AI_IMAGE_BYTES + 1));
+
+    await runAiTagging(env, {
+      uploadId: 'up-1',
+      type: 'image',
+      r2Key: 'uploads/phase-1/huge.jpg',
+      mimeType: 'image/jpeg',
+    });
+
+    const last = updates[updates.length - 1];
+    expect(last).toBeDefined();
+    expect(last.args[3]).toBe('failed');
+    expect(String(last.args[4])).toContain('zu groß');
   });
 
   it('does nothing for non-image uploads', async () => {
@@ -145,5 +193,37 @@ describe('runAiTagging', () => {
     expect(get).not.toHaveBeenCalled();
     expect(run).not.toHaveBeenCalled();
     expect(updates).toHaveLength(0);
+  });
+
+  it('merges manual_tags with new AI tags and writes ai_tags separately', async () => {
+    const { env, updates, get, run } = createMockEnv({
+      dbFirst: async () => ({
+        manual_tags: 'Manuell1, Manuell2',
+        ai_tags: '',
+        tags: 'manuell1, manuell2',
+      }),
+    });
+    get.mockResolvedValue(r2Object(1));
+    run.mockResolvedValue({
+      response: JSON.stringify({
+        tags: ['Beton', 'Manuell1'],
+        description: 'Test',
+      }),
+    });
+
+    await runAiTagging(env, {
+      uploadId: 'up-1',
+      type: 'image',
+      r2Key: 'uploads/phase-1/up-1.jpg',
+      mimeType: 'image/jpeg',
+    });
+
+    const last = updates[updates.length - 1];
+    expect(last).toBeDefined();
+    // merged = deduplicated union: manual first, then ai, preserving order
+    // Manuell1 appears in both manual and AI → deduplicated, first occurrence wins
+    expect(last.args[0]).toBe('manuell1, manuell2, beton');
+    // ai_tags = only the new AI tags (deduplicated from ai result)
+    expect(last.args[1]).toBe('beton');
   });
 });

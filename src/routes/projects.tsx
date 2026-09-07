@@ -10,6 +10,8 @@ import {
   getUploadsForProject,
   deleteProjectCascade,
   getMediaCountsByPhase,
+  getTopTagsForProject,
+  getPendingUploadsForProject,
 } from '../db/queries';
 import { deleteFile } from '../lib/r2';
 import { validateProjectInput } from '../lib/validators';
@@ -73,6 +75,8 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
   }
   const phases = await getPhasesForProject(c.env.DB, projectId);
   const mediaCounts = await getMediaCountsByPhase(c.env.DB, projectId);
+  const topTags = await getTopTagsForProject(c.env.DB, projectId, 5);
+  const pendingUploads = await getPendingUploadsForProject(c.env.DB, projectId, 20);
 
   return c.html(
     <ProjectOverviewPage
@@ -80,6 +84,8 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
       project={project}
       phases={phases}
       mediaCounts={mediaCounts}
+      topTags={topTags}
+      pendingCount={pendingUploads.length}
       ok={c.req.query('ok')}
     />
   );

@@ -51,7 +51,7 @@ quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
   }
 
   try {
-    await handleUpload(c.env, file, phaseId, user.id, notes, manualTags);
+    await handleUpload(c.env, file, phaseId, user.id, notes, manualTags, c.executionCtx);
   } catch (err) {
     console.error('Quick upload failed', err);
     return c.redirect('/upload-quick?error=upload-failed');

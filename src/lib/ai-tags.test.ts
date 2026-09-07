@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { normalizeTag, formatTags } from './ai-tags';
+import { describe, it, expect, vi } from 'vitest';
+import { normalizeTag, formatTags, arrayBufferToBase64, analyzeImage } from './ai-tags';
 
 describe('normalizeTag', () => {
   it('lowercases and trims whitespace', () => {
@@ -51,5 +51,108 @@ describe('formatTags', () => {
   it('returns empty string for empty input', () => {
     expect(formatTags([])).toBe('');
     expect(formatTags(['', '  '])).toBe('');
+  });
+});
+
+describe('arrayBufferToBase64', () => {
+  it('encodes bytes as base64 (chunked)', () => {
+    const bytes = new TextEncoder().encode('Hello');
+    expect(arrayBufferToBase64(bytes.buffer as ArrayBuffer)).toBe(btoa('Hello'));
+  });
+
+  it('handles empty buffers', () => {
+    expect(arrayBufferToBase64(new ArrayBuffer(0))).toBe('');
+  });
+
+  it('handles buffers larger than one chunk', () => {
+    const raw = 'x'.repeat(0x8000 + 100);
+    const bytes = new TextEncoder().encode(raw);
+    expect(arrayBufferToBase64(bytes.buffer as ArrayBuffer)).toBe(btoa(raw));
+  });
+});
+
+function mockImagesWithOutput(output: { response: () => Response } | { reject: unknown }) {
+  const chain = {
+    transform: vi.fn(() => chain),
+    output: vi.fn(async () => {
+      if ('reject' in output) throw output.reject;
+      return output;
+    }),
+  };
+  const images = {
+    input: vi.fn(() => chain),
+    hosted: {
+      image: vi.fn(),
+      upload: vi.fn(),
+      list: vi.fn(),
+      createDirectUpload: vi.fn(),
+    },
+  };
+  return { images, chain };
+}
+
+function makeEnv(images: unknown, run: (inputs: unknown) => Promise<unknown>) {
+  return {
+    AI: { run: vi.fn(run) } as unknown as Ai,
+    IMAGES: images as unknown as ImagesBinding,
+  };
+}
+
+describe('analyzeImage', () => {
+  it('downscales via the Images binding and sends a jpeg data-url to the AI', async () => {
+    const { images, chain } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({
+      response: JSON.stringify({ tags: ['Dach', 'Dachstuhl'], description: 'Dachstuhl im Bau' }),
+    }));
+
+    const result = await analyzeImage(env, new ReadableStream(), 'image/jpeg');
+
+    expect(images.input).toHaveBeenCalledTimes(1);
+    expect(chain.transform).toHaveBeenCalledWith(
+      expect.objectContaining({ width: 1024, height: 1024, fit: 'scale-down' })
+    );
+    expect(chain.output).toHaveBeenCalledWith({ format: 'image/jpeg', quality: 80 });
+
+    const aiCall = (env.AI.run as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(aiCall[0]).toBe('@cf/meta/llama-3.2-11b-vision-instruct');
+    expect(aiCall[1].image).toMatch(/^data:image\/jpeg;base64,AQID$/);
+
+    expect(result).toEqual({ tags: ['Dach', 'Dachstuhl'], description: 'Dachstuhl im Bau' });
+  });
+
+  it('returns null for non-image mime types without calling the AI', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({ response: '{}' }));
+
+    const result = await analyzeImage(env, new ReadableStream(), 'application/pdf');
+
+    expect(result).toBeNull();
+    expect(env.AI.run).not.toHaveBeenCalled();
+    expect(images.input).not.toHaveBeenCalled();
+  });
+
+  it('returns null when the AI response is not parseable JSON', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({ response: 'kein JSON' }));
+
+    const result = await analyzeImage(env, new ReadableStream(), 'image/jpeg');
+
+    expect(result).toBeNull();
+  });
+
+  it('throws a descriptive German error when the Images binding fails', async () => {
+    const { images } = mockImagesWithOutput({ reject: new Error('invalid image') });
+    const env = makeEnv(images, async () => ({ response: '{}' }));
+
+    await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
+      'Bild konnte nicht für die KI-Analyse aufbereitet werden'
+    );
+    expect(env.AI.run).not.toHaveBeenCalled();
   });
 });
