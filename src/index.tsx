@@ -36,7 +36,7 @@ app.use('*', async (c, next) => {
   // Only set CSP on HTML responses
   if (res.headers.get('content-type')?.includes('text/html')) {
     headers['Content-Security-Policy'] =
-      "default-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; object-src 'none'; frame-ancestors 'none'";
+      "default-src 'self'; img-src 'self' https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; worker-src 'self'; object-src 'none'; frame-ancestors 'none'";
   }
   // Cache static CSS
   if (res.headers.get('content-type')?.includes('text/css')) {

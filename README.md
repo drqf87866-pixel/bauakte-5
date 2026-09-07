@@ -33,7 +33,7 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 
 ## Voraussetzungen
 
-- [Node.js](https://nodejs.org/) v20 oder höher (siehe `.nvmrc`)
+- [Node.js](https://nodejs.org/) v22 oder höher (siehe `.nvmrc`)
 - npm (wird mit Node.js installiert)
 - [Cloudflare-Konto](https://dash.cloudflare.com/) für D1, R2 und Workers AI
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (wird über devDependencies installiert)
@@ -71,11 +71,11 @@ Kopiere `.env.example` als `.env` und passe die Werte an. Die wichtigsten Variab
 |---|---|
 | `npm run dev` | Entwicklungsserver starten (Wrangler) |
 | `npm run build` | Produktions-Build (CSS) erstellen |
-| `npm run deploy` | Build + Deploy zu Cloudflare Workers |
+| `npm run deploy` | Build + Deploy zu Cloudflare Workers (ohne DB-Migration) |
 | `npm test` | Tests ausführen (Vitest) |
 | `npm run lint` | TypeScript-Prüfung (`tsc --noEmit`) |
 | `npm run format` | Code-Formatierung mit Prettier |
-| `npm run db:migrate` | Migrationen auf die D1-Produktionsdatenbank anwenden |
+| `npm run db:migrate` | Migrationen manuell auf die D1-Produktionsdatenbank anwenden |
 | `npm run db:migrate:local` | Migrationen auf die lokale D1-Datenbank anwenden |
 | `npm run types` | Wrangler-Type-Definitionen generieren |
 
@@ -92,7 +92,7 @@ Kopiere `.env.example` als `.env` und passe die Werte an. Die wichtigsten Variab
 │   └── index.tsx         # App-Einstiegspunkt mit Hono-Router
 ├── migrations/           # SQL-Migrationen (D1)
 ├── public/               # Statische Assets (kompiliertes app.css)
-├── wrangler.toml         # Wrangler-Konfiguration
+├── wrangler.jsonc        # Wrangler-Konfiguration
 ├── package.json
 ├── tsconfig.json
 ├── vitest.config.ts
@@ -134,12 +134,14 @@ Die Tests decken folgende Bereiche ab:
 
 ## Deployment
 
+Das Deployment erfolgt automatisch über die **native Cloudflare Workers Git Integration** bei jedem Push auf den `main`-Branch. Der Build-Prozess führt `npm run build && wrangler deploy` aus — Datenbank-Migrationen sind davon ausgenommen.
+
 ```bash
-# In Produktion deployen
+# Manuelles Deployment (für Tests)
 npm run deploy
 ```
 
-Vor dem Deployment müssen folgende Cloudflare-Ressourcen eingerichtet sein:
+Vor dem ersten Deployment müssen folgende Cloudflare-Ressourcen eingerichtet sein:
 - **D1-Datenbank** mit dem Binding `DB`
 - **R2-Bucket** mit dem Binding `R2`
 - **Workers AI** mit dem Binding `AI`
@@ -158,7 +160,7 @@ wrangler d1 create bauakte-5
 wrangler r2 bucket create bauakte-5
 ```
 
-Nach dem Anlegen der D1-Datenbank erhältst du eine `database_id`, die in der `wrangler.toml` eingetragen werden muss.
+Nach dem Anlegen der D1-Datenbank erhältst du eine `database_id`, die in der `wrangler.jsonc` eingetragen werden muss.
 
 ### 2. Secrets setzen
 
@@ -174,31 +176,14 @@ openssl rand -base64 32
 
 ### 3. Bindings & Environment Variables
 
-Die folgenden Bindings müssen in der `wrangler.toml` konfiguriert werden:
+Alle Bindings (`DB`, `R2`, `AI`) sind bereits in der `wrangler.jsonc` konfiguriert.  
+Die `database_id` muss nach dem Erstellen der D1-Datenbank aktualisiert werden.
 
-```toml
-# D1-Datenbank
-[[d1_databases]]
-binding = "DB"
-database_name = "bauakte-5"
-database_id = "<deine-database-id>"
+Environment-Variablen können im Cloudflare-Dashboard gesetzt werden:
 
-# R2-Bucket
-[[r2_buckets]]
-binding = "R2"
-bucket_name = "bauakte-5"
+### 4. Datenbank-Migrationen
 
-# Workers AI (keine Konfiguration nötig – wird automatisch bereitgestellt)
-```
-
-Environment-Variablen können entweder in der `wrangler.toml` oder im Cloudflare-Dashboard gesetzt werden:
-
-```toml
-[vars]
-ENV = { APP_TITLE = "Bauakte", PUBLIC_URL = "https://bauakte-5.drqf87866.workers.dev" }
-```
-
-### 4. Initiale Migration ausführen
+Migrationen werden **nicht** automatisch beim Deployment ausgeführt. Führe sie manuell aus, wenn neue Migrationen hinzugekommen sind:
 
 ```bash
 # Migrationen auf die Produktions-DB anwenden
@@ -206,6 +191,9 @@ npm run db:migrate
 ```
 
 ### 5. Deployment
+
+Das Deployment erfolgt automatisch via Git Integration bei Push auf `main`.
+Für ein manuelles Deployment:
 
 ```bash
 npm run deploy

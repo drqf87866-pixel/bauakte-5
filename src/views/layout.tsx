@@ -66,10 +66,14 @@ export function Layout({
         <meta name='theme-color' content='#b91c1c' />
         <meta name='apple-mobile-web-app-capable' content='yes' />
         <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
+        <meta name='apple-mobile-web-app-title' content='Bauakte' />
         <title>{title ? `${title} - Bauakte`: 'Bauakte'}</title>
         <link rel='stylesheet' href='/app.css' />
         <link rel='manifest' href='/manifest.json' />
-        <link rel='apple-touch-icon' href='/icons/icon.svg' />
+        <link rel='apple-touch-icon' href='/icons/apple-icon-180.png' />
+        <link rel='apple-touch-icon' sizes='152x152' href='/icons/apple-icon-152.png' />
+        <link rel='apple-touch-icon' sizes='180x180' href='/icons/apple-icon-180.png' />
+        <link rel='icon' type='image/svg+xml' href='/icons/icon.svg' />
         <script dangerouslySetInnerHTML={{ __html: `
           // Confirm destructive actions (forms with data-confirm-delete)
           document.addEventListener('submit', function(e) {
@@ -126,14 +130,145 @@ export function Layout({
           });
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
+          // --- Service Worker Registration & Update Detection ---
           if ('serviceWorker' in navigator) {
+            var swReg;
+            var swWaiting = null;
+
             window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js');
+              navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                swReg = reg;
+                if (reg.waiting) {
+                  swWaiting = reg.waiting;
+                  showUpdateBanner();
+                }
+                reg.addEventListener('updatefound', function() {
+                  var installing = reg.installing;
+                  if (installing) {
+                    installing.addEventListener('statechange', function() {
+                      if (this.state === 'installed') {
+                        if (navigator.serviceWorker.controller) {
+                          swWaiting = installing;
+                          showUpdateBanner();
+                        }
+                      }
+                    });
+                  }
+                });
+              }).catch(function() {});
             });
+
+            var updating = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+              if (updating) return;
+              updating = true;
+              window.location.reload();
+            });
+          }
+
+          function showUpdateBanner() {
+            var banner = document.getElementById('update-banner');
+            if (banner) banner.classList.remove('hidden');
+          }
+
+          function applyUpdate() {
+            if (swWaiting) {
+              swWaiting.postMessage('SKIP_WAITING');
+            }
+          }
+
+          // --- Install Prompt (Android/Chrome) ---
+          var deferredPrompt = null;
+          var installBanner = document.getElementById('install-banner');
+          var installBtn = document.getElementById('install-btn');
+
+          window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBanner && !localStorage.getItem('pwa-install-dismissed')) {
+              installBanner.classList.remove('hidden');
+            }
+          });
+
+          if (installBtn) {
+            installBtn.addEventListener('click', function() {
+              if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function() {
+                  deferredPrompt = null;
+                });
+              }
+            });
+          }
+
+          // --- iOS Install Hint ---
+          var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          var isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+          var iosBanner = document.getElementById('ios-install-banner');
+
+          if (isIOS && !isStandalone && iosBanner && !localStorage.getItem('pwa-ios-dismissed')) {
+            iosBanner.classList.remove('hidden');
+          }
+
+          // Dismiss handlers
+          function dismissInstall() {
+            var banner = document.getElementById('install-banner');
+            if (banner) banner.classList.add('hidden');
+            localStorage.setItem('pwa-install-dismissed', '1');
+          }
+
+          function dismissIosInstall() {
+            var banner = document.getElementById('ios-install-banner');
+            if (banner) banner.classList.add('hidden');
+            localStorage.setItem('pwa-ios-dismissed', '1');
+          }
+
+          function dismissUpdate() {
+            var banner = document.getElementById('update-banner');
+            if (banner) banner.classList.add('hidden');
           }
         `}} />
       </head>
       <body class='bg-slate-50 min-h-screen text-slate-800'>
+        {/* PWA Install Banner (Android/Chrome) */}
+        <div id='install-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-red-600 text-white px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
+          <div class='flex items-center gap-3'>
+            <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg>
+            <span class='text-sm font-medium'>Bauakte als App installieren</span>
+          </div>
+          <div class='flex items-center gap-2'>
+            <button id='install-btn' class='bg-white text-red-700 font-semibold px-4 py-1.5 rounded-lg text-sm cursor-pointer border-0 hover:bg-red-50 transition'>Installieren</button>
+            <button onclick='dismissInstall()' class='text-white/80 hover:text-white cursor-pointer border-0 bg-transparent p-1' aria-label='Schließen'>
+              <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>
+            </button>
+          </div>
+        </div>
+
+        {/* PWA Install Banner (iOS) */}
+        <div id='ios-install-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-slate-900 text-white px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
+          <div class='flex items-center gap-3'>
+            <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='7 10 12 15 17 10'/><line x1='12' y1='15' x2='12' y2='3'/></svg>
+            <span class='text-sm font-medium'>App installieren: Teilen <span class='inline-block px-1' aria-hidden='true'>⬆️</span> → „Zum Home-Bildschirm"</span>
+          </div>
+          <button onclick='dismissIosInstall()' class='text-white/80 hover:text-white cursor-pointer border-0 bg-transparent p-1 shrink-0' aria-label='Schließen'>
+            <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>
+          </button>
+        </div>
+
+        {/* Update Banner */}
+        <div id='update-banner' class='hidden fixed top-0 left-0 right-0 z-[70] bg-amber-500 text-slate-900 px-4 py-3 flex items-center justify-between shadow-lg' role='alert'>
+          <div class='flex items-center gap-3'>
+            <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='23 4 23 10 17 10'/><polyline points='1 20 1 14 7 14'/><path d='M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'/></svg>
+            <span class='text-sm font-medium'>Neue Version verfügbar</span>
+          </div>
+          <div class='flex items-center gap-2'>
+            <button onclick='applyUpdate()' class='bg-slate-900 text-white font-semibold px-4 py-1.5 rounded-lg text-sm cursor-pointer border-0 hover:bg-slate-800 transition'>Aktualisieren</button>
+            <button onclick='dismissUpdate()' class='text-slate-700 hover:text-slate-900 cursor-pointer border-0 bg-transparent p-1' aria-label='Schließen'>
+              <svg aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='6' x2='6' y2='18'/><line x1='6' y1='6' x2='18' y2='18'/></svg>
+            </button>
+          </div>
+        </div>
+
         {/* Desktop Top Navigation */}
         <nav class='hidden md:block bg-white shadow-sm border-b border-t-4 border-t-red-700 top-header' aria-label='Hauptnavigation'>
           <div class='max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4'>
@@ -175,7 +310,6 @@ export function Layout({
                 class={'flex flex-col items-center justify-center min-h-[48px] min-w-[48px] flex-1 py-2 no-underline transition ' +
                   (active === 'projects' ? 'text-amber-400' : 'text-slate-300 hover:text-white')}>
                 <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/><polyline points='9 22 9 12 15 12 15 22'/></svg>
-                <span class='text-xs mt-1 font-medium'>Projekte</span>
               </a>
 
               <a href='/upload-quick'
@@ -185,7 +319,6 @@ export function Layout({
                 <span class='w-14 h-14 rounded-full bg-amber-500 text-slate-900 shadow-lg flex items-center justify-center group-hover:bg-amber-400 transition active:scale-95'>
                   <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/><circle cx='12' cy='13' r='4'/></svg>
                 </span>
-                <span class={'text-xs mt-1 font-medium ' + (active === 'upload-quick' ? 'text-amber-400' : 'text-slate-300')}>Aufnahme</span>
               </a>
 
               <button type='button' data-toggle-cc aria-label='Benutzermenü'
@@ -193,7 +326,6 @@ export function Layout({
                 <div class={'w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ' + getAvatarStyle(user.name).bg + ' ' + getAvatarStyle(user.name).text}>
                   {getInitials(user.name)}
                 </div>
-                <span class='text-xs mt-1 font-medium'>{user.name.split(' ')[0]}</span>
               </button>
             </div>
           </nav>

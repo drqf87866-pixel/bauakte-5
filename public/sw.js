@@ -1,8 +1,12 @@
-var CACHE = 'bauakte-v1';
+var CACHE = 'bauakte-v2';
 var STATIC_URLS = [
   '/app.css',
   '/manifest.json',
   '/icons/icon.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-icon-180.png',
+  '/icons/apple-icon-152.png',
   '/offline.html',
 ];
 
@@ -28,6 +32,12 @@ self.addEventListener('activate', function (event) {
   self.clients.claim();
 });
 
+self.addEventListener('message', function (event) {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('fetch', function (event) {
   var request = event.request;
   var url = new URL(request.url);
@@ -48,7 +58,7 @@ self.addEventListener('fetch', function (event) {
   }
 
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirstWithFallback(request, '/offline.html'));
+    event.respondWith(networkFirstWithHtmlCache(request));
     return;
   }
 
@@ -70,21 +80,25 @@ function networkFirstWithCache(request) {
   });
 }
 
-function networkFirstWithFallback(request, fallbackUrl) {
-  return fetch(request)
-    .then(function (response) {
-      if (response.ok) {
-        var clone = response.clone();
-        caches.open(CACHE).then(function (cache) { cache.put(request, clone); });
-      }
-      return response;
-    })
-    .catch(function () {
-      return caches.match(fallbackUrl).then(function (cached) {
-        return cached || new Response(
-          '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Keine Verbindung</title><style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#fef2f2;color:#1e293b;text-align:center;padding:2rem}h1{font-size:1.5rem;color:#b91c1c}p{color:#64748b}</style></head><body><div><h1>Keine Verbindung</h1><p>Bitte überprüfe deine Internetverbindung.</p></div></body></html>',
-          { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
-        );
+function networkFirstWithHtmlCache(request) {
+  return caches.open(CACHE).then(function (cache) {
+    return fetch(request)
+      .then(function (response) {
+        if (response.ok) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      })
+      .catch(function () {
+        return caches.match(request).then(function (cached) {
+          if (cached) return cached;
+          return caches.match('/offline.html').then(function (offline) {
+            return offline || new Response(
+              '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Keine Verbindung</title><style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#fef2f2;color:#1e293b;text-align:center;padding:2rem}h1{font-size:1.5rem;color:#b91c1c}p{color:#64748b}</style></head><body><div><h1>Keine Verbindung</h1><p>Bitte überprüfe deine Internetverbindung.</p></div></body></html>',
+              { headers: { 'Content-Type': 'text/html;charset=UTF-8' } }
+            );
+          });
+        });
       });
-    });
+  });
 }
