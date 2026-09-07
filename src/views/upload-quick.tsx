@@ -41,7 +41,7 @@ export function QuickUploadForm({
           {projects.map((p) => (
             (phasesByProject[p.id] || []).map((ph) => (
               <option key={ph.id} value={ph.id} data-project={p.id} class='phase-option'>
-                {p.name} &rarr; {ph.name}
+                {ph.name}
               </option>
             ))
           ))}
