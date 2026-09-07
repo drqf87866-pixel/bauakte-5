@@ -206,6 +206,9 @@ export function Layout({
             if (!sheet) return;
             var trigger = e.target.closest('[data-quick-upload-trigger]');
             if (trigger) {
+              // Already on the full /upload-quick page: let the link behave normally instead of
+              // opening the sheet on top of it (avoids duplicate form element ids on one page).
+              if (location.pathname === '/upload-quick' || location.pathname === '/upload-quick/') return;
               e.preventDefault();
               openOverlay(sheet);
               loadQuickUploadForm();
