@@ -8,6 +8,10 @@ import { canAccessProject } from '../lib/auth';
 
 const uploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
+function documentsUrl(projectId: string, phaseId: string, extra: string): string {
+  return `/projects/${projectId}/documents?phases=${phaseId}&${extra}`;
+}
+
 // Upload file to phase
 uploadRoutes.post('/:projectId/phases/:phaseId/upload', requireAuth, async (c) => {
   const user = c.get('user')!;
@@ -26,17 +30,17 @@ uploadRoutes.post('/:projectId/phases/:phaseId/upload', requireAuth, async (c) =
   const manualTags = (form.manual_tags || '').trim();
 
   if (!file || !(file instanceof File)) {
-    return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=no-file`);
+    return c.redirect(documentsUrl(projectId, phaseId, 'error=no-file'));
   }
 
   try {
     await handleUpload(c.env, file, phaseId, user.id, notes, manualTags);
   } catch (err) {
     console.error('Upload failed', err);
-    return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=upload-failed`);
+    return c.redirect(documentsUrl(projectId, phaseId, 'error=upload-failed'));
   }
 
-  return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=uploaded`);
+  return c.redirect(documentsUrl(projectId, phaseId, 'ok=uploaded'));
 });
 
 // Delete upload
@@ -58,7 +62,7 @@ uploadRoutes.post('/uploads/:uploadId/delete', requireAuth, async (c) => {
   await deleteFile(c.env.R2, upload.r2_key);
   await deleteUpload(c.env.DB, uploadId);
 
-  return c.redirect(`/projects/${phase.project_id}/phases/${upload.phase_id}?ok=deleted`);
+  return c.redirect(documentsUrl(phase.project_id, upload.phase_id, 'ok=deleted'));
 });
 
 // Retry AI auto-tagging for an upload
@@ -77,9 +81,8 @@ uploadRoutes.post('/uploads/:uploadId/retag', requireAuth, async (c) => {
     return c.text('Forbidden', 403);
   }
 
-  const phaseUrl = `/projects/${phase.project_id}/phases/${upload.phase_id}`;
   if (upload.type !== 'image') {
-    return c.redirect(`${phaseUrl}?error=retag-not-image`);
+    return c.redirect(documentsUrl(phase.project_id, upload.phase_id, 'error=retag-not-image'));
   }
 
   await runAiTagging(c.env, {
@@ -91,9 +94,9 @@ uploadRoutes.post('/uploads/:uploadId/retag', requireAuth, async (c) => {
 
   const updated = await getUploadById(c.env.DB, uploadId);
   if (updated?.tag_status === 'failed') {
-    return c.redirect(`${phaseUrl}?error=retag-failed`);
+    return c.redirect(documentsUrl(phase.project_id, upload.phase_id, 'error=retag-failed'));
   }
-  return c.redirect(`${phaseUrl}?ok=retagged`);
+  return c.redirect(documentsUrl(phase.project_id, upload.phase_id, 'ok=retagged'));
 });
 
 // Serve R2 file (requires auth + project access)

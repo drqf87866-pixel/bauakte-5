@@ -1,5 +1,6 @@
 import type { Upload } from '../../db/schema';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 
 export function uploadTags(upload: Upload): string[] {
   if (!upload.tags) return [];
@@ -41,6 +42,31 @@ export function TagChips({ upload, limit }: { upload: Upload; limit?: number }) 
           +{hidden}
         </span>
       )}
+    </div>
+  );
+}
+
+/** Shows the async AI-tagging status of an image upload (pending spinner / failed + retry). */
+export function AiStatusIndicator({ upload }: { upload: Upload }) {
+  if (upload.type !== 'image' || upload.tag_status === 'done' || upload.tag_status === 'none') {
+    return null;
+  }
+  if (upload.tag_status === 'pending') {
+    return (
+      <div class='flex items-center gap-1.5 mt-2'>
+        <svg class='animate-spin shrink-0 text-amber-600' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M21 12a9 9 0 1 1-6.219-8.56'/></svg>
+        <span class='text-xs font-semibold text-amber-700'>Wird analysiert&hellip;</span>
+      </div>
+    );
+  }
+  return (
+    <div class='flex items-center justify-between gap-2 mt-2'>
+      <span class='text-xs font-semibold text-red-700 truncate' title={upload.tag_error || undefined}>
+        Analyse fehlgeschlagen
+      </span>
+      <form method='post' action={'/uploads/' + upload.id + '/retag'} class='inline shrink-0'>
+        <Button type='submit' variant='secondary' size='sm'>Erneut analysieren</Button>
+      </form>
     </div>
   );
 }

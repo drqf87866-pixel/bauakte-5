@@ -8,9 +8,10 @@ interface NavLinkProps {
   active: boolean;
 }
 
-function NavLink({ href, label, active }: NavLinkProps) {
+function NavLink({ href, label, active, quickUpload }: NavLinkProps & { quickUpload?: boolean }) {
   return (
     <a href={href}
+      data-quick-upload-trigger={quickUpload ? true : undefined}
       aria-current={active ? 'page' : undefined}
       class={'px-3 py-2 rounded-lg text-base font-semibold no-underline transition ' +
         (active
@@ -35,7 +36,7 @@ export function DesktopNav({ user, active }: DesktopNavProps) {
           <div class='flex items-center gap-1 ml-4'>
             <NavLink href='/projects' label='Projekte' active={active === 'projects'} />
             <NavLink href='/phases' label='Phasen' active={active === 'phases'} />
-            <NavLink href='/upload-quick' label='Schnell-Upload' active={active === 'upload-quick'} />
+            <NavLink href='/upload-quick' label='Schnell-Upload' active={active === 'upload-quick'} quickUpload />
           </div>
         </div>
         <div class='flex items-center gap-4'>

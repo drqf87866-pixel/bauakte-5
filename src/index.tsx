@@ -7,7 +7,7 @@ import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import phaseRoutes from './routes/phases';
 import phaseOverviewRoutes from './routes/phases-overview';
-import galleryRoutes from './routes/gallery';
+import documentsRoutes from './routes/project-documents';
 import uploadRoutes from './routes/uploads';
 import shareRoutes from './routes/share';
 import quickUploadRoutes from './routes/upload-quick';
@@ -64,7 +64,7 @@ app.route('/account', authRoutes);
 
 app.route('/projects', projectRoutes);
 app.route('/projects', phaseRoutes);
-app.route('/projects', galleryRoutes);
+app.route('/projects', documentsRoutes);
 app.route('/projects', uploadRoutes);
 app.route('/projects', shareRoutes);
 app.route('/', phaseOverviewRoutes);

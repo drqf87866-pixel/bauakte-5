@@ -9,11 +9,13 @@ import {
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
-import { ProjectGalleryPage } from '../views/project-gallery';
+import { ProjectDocumentsPage } from '../views/project-documents';
 
-const galleryRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
+const documentsRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
-galleryRoutes.get('/projects/:id/gallery', requireAuth, async (c) => {
+// Merged documents view: replaces the old separate gallery + per-phase pages.
+// A phase is just a filter now — selecting exactly one shows its status/notes/upload actions inline.
+documentsRoutes.get('/projects/:id/documents', requireAuth, async (c) => {
   const user = c.get('user')!;
   const projectId = c.req.param('id')!;
   const project = await getProjectById(c.env.DB, projectId);
@@ -42,7 +44,7 @@ galleryRoutes.get('/projects/:id/gallery', requireAuth, async (c) => {
   );
 
   return c.html(
-    <ProjectGalleryPage
+    <ProjectDocumentsPage
       user={user}
       project={project}
       phases={phases}
@@ -56,8 +58,16 @@ galleryRoutes.get('/projects/:id/gallery', requireAuth, async (c) => {
       activeTag={activeTag}
       q={q}
       ok={c.req.query('ok')}
+      error={c.req.query('error')}
     />
   );
 });
 
-export default galleryRoutes;
+// Back-compat: old bookmarked/shared "/gallery" and "/phases/:phaseId" URLs still work.
+documentsRoutes.get('/projects/:id/gallery', (c) => {
+  const projectId = c.req.param('id')!;
+  const query = new URL(c.req.url).search;
+  return c.redirect(`/projects/${projectId}/documents${query}`, 301);
+});
+
+export default documentsRoutes;

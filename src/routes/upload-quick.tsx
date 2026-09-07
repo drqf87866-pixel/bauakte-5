@@ -4,11 +4,13 @@ import { getProjectsForUser as getProjectsByUser, getPhasesForProjects, getProje
 import { handleUpload } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
-import { QuickUploadPage } from '../views/upload-quick';
+import { QuickUploadPage, QuickUploadForm } from '../views/upload-quick';
 
 const quickUploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
-// Show quick upload page
+// Show quick upload page — also serves the bare form fragment (?fragment=1) that the
+// global quick-upload bottom sheet fetches on open (see layout.tsx), so the sheet works
+// from anywhere without every route having to preload projects/phases.
 quickUploadRoutes.get('/upload-quick', requireAuth, async (c) => {
   const user = c.get('user')!;
   const projects = await getProjectsByUser(c.env.DB, user.id);
@@ -17,6 +19,9 @@ quickUploadRoutes.get('/upload-quick', requireAuth, async (c) => {
   const phasesByProject: Record<string, Phase[]> = {};
   for (const project of projects) {
     phasesByProject[project.id] = phasesMap.get(project.id) ?? [];
+  }
+  if (c.req.query('fragment') === '1') {
+    return c.html(<QuickUploadForm projects={projects} phasesByProject={phasesByProject} error={c.req.query('error')} />);
   }
   return c.html(<QuickUploadPage user={user} projects={projects} phasesByProject={phasesByProject} error={c.req.query('error')} />);
 });
@@ -52,7 +57,7 @@ quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
     return c.redirect('/upload-quick?error=upload-failed');
   }
 
-  return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=uploaded`);
+  return c.redirect(`/projects/${projectId}/documents?phases=${phaseId}&ok=uploaded`);
 });
 
 export default quickUploadRoutes;

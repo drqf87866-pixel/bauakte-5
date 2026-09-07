@@ -3,6 +3,9 @@ import { Alert } from '../components/ui/alert';
 import { DesktopNav } from '../components/layout/nav-desktop';
 import { MobileNav } from '../components/layout/nav-mobile';
 import { ControlCenter } from '../components/layout/control-center';
+import { QuickUploadSheet } from '../components/layout/quick-upload-sheet';
+import { ConfirmSheet } from '../components/layout/confirm-sheet';
+import { Lightbox } from '../components/layout/lightbox';
 import type { NavActive } from '../components/layout/nav-types';
 
 export type { NavActive };
@@ -61,13 +64,43 @@ export function Layout({
         <link rel='apple-touch-icon' sizes='180x180' href='/icons/apple-icon-180.png' />
         <link rel='icon' type='image/svg+xml' href='/icons/icon.svg' />
         <script dangerouslySetInnerHTML={{ __html: `
-          // Confirm destructive actions (forms with data-confirm-delete)
+          function openOverlay(el) { el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); }
+          function closeOverlay(el) { el.classList.add('hidden'); el.setAttribute('aria-hidden', 'true'); }
+
+          // Confirm destructive actions via bottom sheet (forms with data-confirm-delete)
+          // instead of the blocking, unstyleable window.confirm().
+          var pendingConfirmForm = null;
           document.addEventListener('submit', function(e) {
             var form = e.target;
             if (!form || !form.hasAttribute || !form.hasAttribute('data-confirm-delete')) return;
+            if (form.dataset.confirmed === '1') return;
+            e.preventDefault();
+            var sheet = document.getElementById('confirm-sheet');
             var msg = form.getAttribute('data-confirm-message') ||
               'Wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
-            if (!window.confirm(msg)) e.preventDefault();
+            if (!sheet) {
+              if (window.confirm(msg)) { form.dataset.confirmed = '1'; form.requestSubmit ? form.requestSubmit() : form.submit(); }
+              return;
+            }
+            pendingConfirmForm = form;
+            var msgEl = sheet.querySelector('[data-confirm-message]');
+            if (msgEl) msgEl.textContent = msg;
+            openOverlay(sheet);
+          });
+          document.addEventListener('click', function(e) {
+            var sheet = document.getElementById('confirm-sheet');
+            if (!sheet || sheet.classList.contains('hidden')) return;
+            if (e.target.closest('[data-confirm-accept]')) {
+              closeOverlay(sheet);
+              var f = pendingConfirmForm;
+              pendingConfirmForm = null;
+              if (f) { f.dataset.confirmed = '1'; f.requestSubmit ? f.requestSubmit() : f.submit(); }
+              return;
+            }
+            if (e.target.closest('[data-confirm-close]') || e.target.closest('[data-confirm-backdrop]')) {
+              closeOverlay(sheet);
+              pendingConfirmForm = null;
+            }
           });
 
           // Upload forms: disable submit button while uploading
@@ -84,6 +117,50 @@ export function Layout({
             }
           });
 
+          // Forms marked data-ajax-form (currently just Schnell-Upload) submit via XHR instead
+          // of a full page POST: shows a real progress bar and, on success, navigates straight
+          // to the resulting page - no intermediate /upload-quick page flash.
+          document.addEventListener('submit', function(e) {
+            var form = e.target;
+            if (!form || !form.hasAttribute || !form.hasAttribute('data-ajax-form')) return;
+            e.preventDefault();
+            var progress = form.querySelector('[data-upload-progress]');
+            var fill = form.querySelector('[data-upload-progress-fill]');
+            var label = form.querySelector('[data-upload-progress-label]');
+            if (progress) progress.hidden = false;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', form.action, true);
+            xhr.upload.addEventListener('progress', function(ev) {
+              if (!ev.lengthComputable) return;
+              var pct = Math.round((ev.loaded / ev.total) * 100);
+              if (fill) fill.style.width = pct + '%';
+              if (label) label.textContent = pct < 100 ? ('Wird hochgeladen\u2026 ' + pct + '%') : 'Wird verarbeitet\u2026';
+            });
+            xhr.onload = function() {
+              if (xhr.status >= 200 && xhr.status < 400) {
+                window.location.assign(xhr.responseURL || form.action);
+              } else {
+                resetAjaxForm(form, progress);
+                if (label) label.textContent = 'Upload fehlgeschlagen - bitte erneut versuchen.';
+              }
+            };
+            xhr.onerror = function() {
+              resetAjaxForm(form, progress);
+              if (label) label.textContent = 'Upload fehlgeschlagen - bitte erneut versuchen.';
+            };
+            xhr.send(new FormData(form));
+          });
+          function resetAjaxForm(form, progress) {
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+              btn.disabled = false;
+              btn.classList.remove('opacity-60', 'cursor-wait');
+              if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+            }
+            if (progress) progress.hidden = true;
+          }
+
           // Image error fallback (data-img-fallback)
           document.addEventListener('error', function(e) {
             var img = e.target;
@@ -93,6 +170,145 @@ export function Layout({
             placeholder.className = 'w-full h-32 sm:h-48 bg-slate-200 flex items-center justify-center text-slate-400';
             placeholder.innerHTML = '<svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
             img.parentNode.insertBefore(placeholder, img.nextSibling);
+          });
+
+          // data-file-input-group: generic filename display for any file input (works for
+          // both server-rendered forms and forms injected later, e.g. the quick-upload sheet).
+          document.addEventListener('change', function(e) {
+            var input = e.target;
+            if (!input || input.type !== 'file') return;
+            var group = input.closest('[data-file-input-group]');
+            var out = group && group.querySelector('[data-file-name-for]');
+            if (out) out.textContent = input.files && input.files[0] ? input.files[0].name : '';
+          });
+
+          // Schnell-Upload: filter the phase <select> down to the chosen project's phases
+          // (previously showed every phase of every project at once).
+          document.addEventListener('change', function(e) {
+            var sel = e.target;
+            if (!sel || !sel.matches || !sel.matches('[data-qu-project]')) return;
+            var form = sel.closest('form');
+            var phaseSelect = form && form.querySelector('[data-qu-phase]');
+            if (!phaseSelect) return;
+            var projectId = sel.value;
+            var stillValid = false;
+            phaseSelect.querySelectorAll('option[data-project]').forEach(function(opt) {
+              var matches = opt.getAttribute('data-project') === projectId;
+              opt.hidden = projectId ? !matches : false;
+              if (opt.selected && matches) stillValid = true;
+            });
+            if (!stillValid) phaseSelect.value = '';
+          });
+
+          // Quick-upload bottom sheet: opens instantly, form fragment loaded on demand.
+          document.addEventListener('click', function(e) {
+            var sheet = document.getElementById('quick-upload-sheet');
+            if (!sheet) return;
+            var trigger = e.target.closest('[data-quick-upload-trigger]');
+            if (trigger) {
+              e.preventDefault();
+              openOverlay(sheet);
+              loadQuickUploadForm();
+              return;
+            }
+            if (sheet.classList.contains('hidden')) return;
+            if (e.target.closest('[data-qu-close]')) closeOverlay(sheet);
+          });
+          function loadQuickUploadForm() {
+            var body = document.getElementById('quick-upload-sheet-body');
+            if (!body) return;
+            body.innerHTML = '<div class="flex items-center justify-center py-10 text-slate-400"><svg class="animate-spin shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>';
+            fetch('/upload-quick?fragment=1')
+              .then(function(res) { return res.text(); })
+              .then(function(html) { body.innerHTML = html; })
+              .catch(function() {
+                body.innerHTML = '<p class="text-sm text-error font-medium text-center py-6">Formular konnte nicht geladen werden. <a href="/upload-quick" class="underline">Seite öffnen</a></p>';
+              });
+          }
+
+          // Lightbox: in-app image viewer for any [data-lightbox] thumbnail inside a
+          // .lightbox-group grid, with next/prev + swipe across that group's images.
+          var lightboxItems = [];
+          var lightboxIndex = 0;
+          document.addEventListener('click', function(e) {
+            var trigger = e.target.closest('[data-lightbox]');
+            if (trigger) {
+              e.preventDefault();
+              var group = trigger.closest('.lightbox-group');
+              lightboxItems = group ? Array.prototype.slice.call(group.querySelectorAll('[data-lightbox]')) : [trigger];
+              lightboxIndex = lightboxItems.indexOf(trigger);
+              showLightbox();
+              return;
+            }
+            var lb = document.getElementById('lightbox');
+            if (!lb || lb.classList.contains('hidden')) return;
+            if (e.target.closest('[data-lightbox-close]') || e.target === lb) { closeLightboxEl(lb); return; }
+            if (e.target.closest('[data-lightbox-prev]')) { lightboxIndex = (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length; showLightbox(); return; }
+            if (e.target.closest('[data-lightbox-next]')) { lightboxIndex = (lightboxIndex + 1) % lightboxItems.length; showLightbox(); return; }
+          });
+          function showLightbox() {
+            var lb = document.getElementById('lightbox');
+            var img = document.getElementById('lightbox-img');
+            var caption = document.getElementById('lightbox-caption');
+            var el = lightboxItems[lightboxIndex];
+            if (!lb || !img || !el) return;
+            img.src = el.getAttribute('data-full-src') || el.getAttribute('href');
+            img.alt = el.getAttribute('data-caption') || '';
+            if (caption) caption.textContent = el.getAttribute('data-caption') || '';
+            var multi = lightboxItems.length > 1;
+            var prevBtn = lb.querySelector('[data-lightbox-prev]');
+            var nextBtn = lb.querySelector('[data-lightbox-next]');
+            if (prevBtn) prevBtn.hidden = !multi;
+            if (nextBtn) nextBtn.hidden = !multi;
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+            lb.setAttribute('aria-hidden', 'false');
+          }
+          function closeLightboxEl(lb) {
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+            lb.setAttribute('aria-hidden', 'true');
+          }
+          (function() {
+            var startX = null;
+            document.addEventListener('touchstart', function(e) {
+              var lb = document.getElementById('lightbox');
+              startX = (lb && !lb.classList.contains('hidden')) ? e.touches[0].clientX : null;
+            }, { passive: true });
+            document.addEventListener('touchend', function(e) {
+              if (startX === null) return;
+              var dx = e.changedTouches[0].clientX - startX;
+              startX = null;
+              if (Math.abs(dx) < 40 || lightboxItems.length < 2) return;
+              lightboxIndex = dx > 0
+                ? (lightboxIndex - 1 + lightboxItems.length) % lightboxItems.length
+                : (lightboxIndex + 1) % lightboxItems.length;
+              showLightbox();
+            }, { passive: true });
+          })();
+
+          // Copy-to-clipboard (share link) with toast feedback
+          var toastTimer = null;
+          function showToast(msg) {
+            var toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.textContent = msg;
+            toast.classList.remove('hidden');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(function() { toast.classList.add('hidden'); }, 2200);
+          }
+          document.addEventListener('click', function(e) {
+            var input = e.target.closest('[data-copy-link]');
+            if (!input) return;
+            input.select();
+            var done = function() { showToast('Link kopiert ✓'); };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(input.value).then(done).catch(function() {
+                try { document.execCommand('copy'); done(); } catch (err) {}
+              });
+            } else {
+              try { document.execCommand('copy'); done(); } catch (err) {}
+            }
           });
 
           // Control center toggle
@@ -113,6 +329,19 @@ export function Layout({
             if (isInside && !isAction) return;
             sheet.classList.add('hidden');
             sheet.setAttribute('aria-hidden', 'true');
+          });
+
+          // Escape closes whichever overlay is currently open
+          document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            var cc = document.getElementById('control-center');
+            if (cc && cc.getAttribute('aria-hidden') === 'false') { cc.classList.add('hidden'); cc.setAttribute('aria-hidden', 'true'); return; }
+            var qu = document.getElementById('quick-upload-sheet');
+            if (qu && !qu.classList.contains('hidden')) { closeOverlay(qu); return; }
+            var cs = document.getElementById('confirm-sheet');
+            if (cs && !cs.classList.contains('hidden')) { closeOverlay(cs); pendingConfirmForm = null; return; }
+            var lb = document.getElementById('lightbox');
+            if (lb && !lb.classList.contains('hidden')) { closeLightboxEl(lb); }
           });
         `}} />
         <script dangerouslySetInnerHTML={{ __html: `
@@ -270,6 +499,14 @@ export function Layout({
 
         {/* Control Center Overlay */}
         {user && <ControlCenter user={user} />}
+
+        {/* Global overlays: quick-upload sheet, delete-confirmation sheet, image lightbox */}
+        {user && <QuickUploadSheet />}
+        {user && <ConfirmSheet />}
+        {user && <Lightbox />}
+
+        {/* Toast (e.g. "Link kopiert") */}
+        <div id='toast' class='hidden fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[95] bg-slate-900 text-white text-sm font-semibold px-4 py-2.5 rounded-lg shadow-lg animate-fade-in' role='status' aria-live='polite'></div>
       </body>
     </html>
   );

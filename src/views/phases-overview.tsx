@@ -93,10 +93,10 @@ function ProjectPhaseSection({
             <p class='text-sm text-slate-600 font-medium truncate'>{item.project.address}</p>
           )}
         </div>
-        <a href={'/projects/' + item.project.id + '/gallery'}
+        <a href={'/projects/' + item.project.id + '/documents'}
           class='text-sm text-accent font-semibold no-underline hover:underline shrink-0 min-h-[40px] flex items-center gap-1'>
           <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'/><circle cx='8.5' cy='8.5' r='1.5'/><polyline points='21 15 16 10 5 21'/></svg>
-          Galerie
+          Dokumente
         </a>
       </div>
       <div class='mb-4'>
@@ -124,7 +124,7 @@ function PhaseRow({
 }) {
   return (
     <li>
-      <a href={'/projects/' + projectId + '/phases/' + phase.id}
+      <a href={'/projects/' + projectId + '/documents?phases=' + phase.id}
         class='flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition no-underline'>
         <span class={'shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ' +
           (phase.status === 'completed'

@@ -9,16 +9,14 @@ import {
   getPhasesForProject,
   getUploadsForProject,
   deleteProjectCascade,
-  getUploadsForProjectPaginated,
   getMediaCountsByPhase,
-  getTagsForProject,
 } from '../db/queries';
 import { deleteFile } from '../lib/r2';
 import { validateProjectInput } from '../lib/validators';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
 import { PHASE_NAMES } from '../db/schema';
-import { DashboardPage, ProjectDetailPage, NewProjectPage } from '../views/projects';
+import { DashboardPage, ProjectOverviewPage, NewProjectPage } from '../views/projects';
 
 const projectRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
@@ -76,32 +74,12 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
   const phases = await getPhasesForProject(c.env.DB, projectId);
   const mediaCounts = await getMediaCountsByPhase(c.env.DB, projectId);
 
-  // Parse filter params
-  const rawPhases = c.req.query('phases');
-  const activePhases = rawPhases ? rawPhases.split(',').filter(Boolean) : [];
-  const activeTag = c.req.query('tag') || undefined;
-  const page = parseInt(c.req.query('page') || '1', 10);
-
-  const { uploads, total, totalPages } = await getUploadsForProjectPaginated(c.env.DB, projectId, {
-    phaseIds: activePhases.length > 0 ? activePhases : undefined,
-    tag: activeTag,
-    page,
-  });
-  const allTags = await getTagsForProject(c.env.DB, projectId, activePhases.length > 0 ? activePhases : undefined);
-
   return c.html(
-    <ProjectDetailPage
+    <ProjectOverviewPage
       user={user}
       project={project}
       phases={phases}
       mediaCounts={mediaCounts}
-      uploads={uploads}
-      uploadTotal={total}
-      uploadPage={page}
-      uploadTotalPages={totalPages}
-      allTags={allTags}
-      activePhases={activePhases}
-      activeTag={activeTag}
       ok={c.req.query('ok')}
     />
   );

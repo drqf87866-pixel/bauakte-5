@@ -57,7 +57,9 @@ export function FileInputField({ label, error, hint, class: extraClass = '', ...
   return (
     <div>
       {label && <label class='block text-base font-semibold mb-2 text-slate-800' for={inputId}>{label}</label>}
-      <div class='flex flex-col items-center gap-2'>
+      {/* data-file-input-group: scopes the generic filename-display delegation in layout.tsx
+          (works for both server-rendered and JS-injected instances, e.g. the quick-upload sheet) */}
+      <div class='flex flex-col items-center gap-2' data-file-input-group>
         <label
           for={inputId}
           class={`inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-lg bg-accent text-slate-900 font-bold text-base cursor-pointer hover:bg-amber-400 transition min-h-[48px] ${extraClass}`}>
@@ -74,18 +76,6 @@ export function FileInputField({ label, error, hint, class: extraClass = '', ...
         {hint && <p class='text-xs text-slate-500 font-medium text-center'>{hint}</p>}
         {error && <p class='text-sm text-error mt-1 font-medium'>{error}</p>}
       </div>
-      {inputId && (
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function(){
-            var i=document.getElementById(${JSON.stringify(inputId)});
-            var o=document.querySelector('[data-file-name-for="' + ${JSON.stringify(inputId)} + '"]');
-            if(!i||!o)return;
-            i.addEventListener('change',function(){
-              o.textContent = i.files && i.files[0] ? i.files[0].name : '';
-            });
-          })();
-        ` }} />
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Layout, Flash } from './layout';
 import type { User, Project, ShareLink } from '../db/schema';
 import { Breadcrumb } from '../components/ui/breadcrumb';
 import { Button } from '../components/ui/button';
+import { ProjectTabs } from '../components/layout/project-tabs';
 
 export function SharePage({
   user, project, shareLinks, baseUrl, ok,
@@ -18,6 +19,9 @@ export function SharePage({
         { label: project.name, href: '/projects/' + project.id },
         { label: 'Teilen' },
       ]} />
+      <div class='mb-4'>
+        <ProjectTabs projectId={project.id} active='share' isOwner={true} />
+      </div>
       <h1 class='text-2xl font-bold mb-6 text-slate-900'>Projekt teilen</h1>
       <Flash ok={ok} />
       <div class='card mb-6'>
@@ -44,7 +48,7 @@ export function SharePage({
                   readOnly
                   aria-label='Einladungslink – zum Kopieren antippen'
                   class='w-full text-sm text-accent bg-accent-light px-4 py-3 pr-10 rounded-lg border border-amber-300 text-base cursor-pointer'
-                  onclick='this.select(); if(navigator.clipboard){navigator.clipboard.writeText(this.value)}else{document.execCommand("copy")}' />
+                  data-copy-link />
                 <svg class='shrink-0 absolute right-2 top-2.5 text-amber-400 pointer-events-none' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='13' height='13' rx='2' ry='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>
                 <p class='text-xs text-slate-500 mt-1 font-medium'>
                   Erstellt am {new Date(link.created_at).toLocaleDateString('de-DE')}

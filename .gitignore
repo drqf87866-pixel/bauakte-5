@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Secrets / Environment
+.dev.vars
+*.vars
+
 # Build outputs
 dist/
 public/app.css

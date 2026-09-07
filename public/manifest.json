@@ -10,6 +10,22 @@
   "theme_color": "#b91c1c",
   "categories": ["productivity", "utilities"],
   "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Schnell-Upload",
+      "short_name": "Upload",
+      "description": "Foto oder Dokument direkt hochladen",
+      "url": "/upload-quick",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Neues Projekt",
+      "short_name": "Neues Projekt",
+      "description": "Neues Bauprojekt anlegen",
+      "url": "/projects/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
