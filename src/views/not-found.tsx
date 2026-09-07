@@ -1,6 +1,7 @@
 import { jsx } from 'hono/jsx';
 import { Layout } from './layout';
 import type { User } from '../db/schema';
+import { Button } from '../components/ui/button';
 
 export function NotFoundPage({ user }: { user?: User | null }) {
   return (
@@ -11,10 +12,7 @@ export function NotFoundPage({ user }: { user?: User | null }) {
         <p class='text-slate-600 font-medium mb-6'>
           Diese Seite existiert nicht oder wurde verschoben.
         </p>
-        <a href='/'
-          class='inline-flex items-center justify-center bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition min-h-[48px] font-semibold text-base no-underline'>
-          Zur Startseite
-        </a>
+        <Button href='/' variant='primary'>Zur Startseite</Button>
       </div>
     </Layout>
   );

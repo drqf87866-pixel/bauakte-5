@@ -2,6 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
+type Db = InstanceType<typeof Database>;
+
 /**
  * Emulates Cloudflare D1Database using better-sqlite3.
  * Implements only the subset of D1Database / D1PreparedStatement used
@@ -16,10 +18,10 @@ interface D1Result<T = unknown> {
 
 export class D1PreparedStatement {
   private sql: string;
-  private db: Database.Database;
+  private db: Db;
   private params: unknown[] = [];
 
-  constructor(db: Database.Database, sql: string) {
+  constructor(db: Db, sql: string) {
     this.db = db;
     this.sql = sql;
   }
@@ -74,8 +76,8 @@ export class D1PreparedStatement {
   }
 }
 
-export class D1Adapter implements D1Database {
-  private db: Database.Database;
+export class D1Adapter {
+  private db: Db;
 
   constructor(dbPath?: string) {
     const dir = path.resolve(process.cwd(), '.wrangler', 'state', 'v3', 'd1');
@@ -110,11 +112,13 @@ export class D1Adapter implements D1Database {
     return Promise.resolve(tx());
   }
 
-  async exec(sql: string): Promise<void> {
+  async exec(sql: string): Promise<D1ExecResult> {
     try {
       this.db.exec(sql);
+      return { count: 0, duration: 0 };
     } catch (err: any) {
       console.error(`[D1] exec() error: ${err.message}`);
+      return { count: 0, duration: 0 };
     }
   }
 

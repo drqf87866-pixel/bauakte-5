@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
 import type { Env, User } from '../db/schema';
-import { getProjectsForUser as getProjectsByUser, getPhasesForProject, createUpload } from '../db/queries';
-import { uploadFile } from '../lib/r2';
-import { analyzeImage, formatTags } from '../lib/ai-tags';
-import { updateUploadTags } from '../db/queries';
+import { getProjectsForUser as getProjectsByUser, getPhasesForProject } from '../db/queries';
+import { handleUpload } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 import { QuickUploadPage } from '../views/upload-quick';
 
@@ -33,37 +31,11 @@ quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
     return c.redirect('/upload-quick?error=missing-fields');
   }
 
-  const uploadId = crypto.randomUUID();
-  const { key, type } = await uploadFile(c.env.R2, file, phaseId, uploadId);
-
-  await createUpload(
-    c.env.DB,
-    uploadId,
-    phaseId,
-    user.id,
-    file.name,
-    type,
-    key,
-    file.type,
-    file.size,
-    notes
-  );
-
-  // KI-Auto-Tagging for images (error-tolerant)
-  if (type === 'image') {
-    try {
-      const object = await c.env.R2.get(key);
-      if (object) {
-        const imageBuffer = await object.arrayBuffer();
-        const result = await analyzeImage(c.env.AI, imageBuffer, file.type);
-        if (result && result.tags.length > 0) {
-          const tagsStr = formatTags(result.tags);
-          await updateUploadTags(c.env.DB, uploadId, tagsStr);
-        }
-      }
-    } catch (tagErr) {
-      console.error('Auto-tagging failed for quick upload', uploadId, tagErr);
-    }
+  try {
+    await handleUpload(c.env, file, phaseId, user.id, notes);
+  } catch (err) {
+    console.error('Quick upload failed', err);
+    return c.redirect('/upload-quick?error=upload-failed');
   }
 
   return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=uploaded`);

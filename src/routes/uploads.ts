@@ -1,9 +1,8 @@
 ﻿import { Hono } from 'hono';
-import type { Env, User, Upload } from '../db/schema';
-import { getProjectById, getPhaseById, createUpload, getUploadsForPhase, getUploadById, deleteUpload } from '../db/queries';
-import { uploadFile, deleteFile } from '../lib/r2';
-import { analyzeImage, formatTags } from '../lib/ai-tags';
-import { updateUploadTags } from '../db/queries';
+import type { Env, User } from '../db/schema';
+import { getProjectById, getPhaseById, getUploadById, deleteUpload } from '../db/queries';
+import { deleteFile } from '../lib/r2';
+import { handleUpload } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 
 const uploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
@@ -25,45 +24,11 @@ uploadRoutes.post('/:projectId/phases/:phaseId/upload', requireAuth, async (c) =
     return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=no-file`);
   }
 
-  const uploadId = crypto.randomUUID();
-  let key: string;
-  let type: 'image' | 'video' | 'doc';
   try {
-    ({ key, type } = await uploadFile(c.env.R2, file, phaseId, uploadId));
+    await handleUpload(c.env, file, phaseId, user.id, notes);
   } catch (err) {
-    console.error('R2 upload failed', err);
+    console.error('Upload failed', err);
     return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=upload-failed`);
-  }
-
-  await createUpload(
-    c.env.DB,
-    uploadId,
-    phaseId,
-    user.id,
-    file.name,
-    type,
-    key,
-    file.type,
-    file.size,
-    notes
-  );
-
-  // KI-Auto-Tagging for images (error-tolerant)
-  if (type === 'image') {
-    try {
-      const object = await c.env.R2.get(key);
-      if (object) {
-        const imageBuffer = await object.arrayBuffer();
-        const result = await analyzeImage(c.env.AI, imageBuffer, file.type);
-        if (result && result.tags.length > 0) {
-          const tagsStr = formatTags(result.tags);
-          await updateUploadTags(c.env.DB, uploadId, tagsStr);
-        }
-      }
-    } catch (tagErr) {
-      // Tagging errors don't block the upload
-      console.error('Auto-tagging failed for upload', uploadId, tagErr);
-    }
   }
 
   return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=uploaded`);
@@ -76,7 +41,6 @@ uploadRoutes.post('/uploads/:uploadId/delete', requireAuth, async (c) => {
   const upload = await getUploadById(c.env.DB, uploadId);
   if (!upload) return c.notFound();
 
-  // Find project ID from phase
   const phase = await getPhaseById(c.env.DB, upload.phase_id);
   if (!phase) return c.notFound();
 
@@ -87,7 +51,7 @@ uploadRoutes.post('/uploads/:uploadId/delete', requireAuth, async (c) => {
 });
 
 // Serve R2 file
-uploadRoutes.get('/r2/:key', async (c) => {
+uploadRoutes.get('/r2/:key{.+}', async (c) => {
   const key = c.req.param('key');
   const object = await c.env.R2.get(key);
   if (!object) return c.notFound();

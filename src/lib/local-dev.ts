@@ -48,14 +48,16 @@ function runMigrations(d1: D1Adapter): void {
 // ── R2 stub (local filesystem) ────────────────────────────────────────
 const UPLOAD_DIR = path.resolve(process.cwd(), '.local-uploads');
 
-class R2ObjectStub implements R2Object {
+class R2ObjectStub {
   key: string;
   version: string;
   size: number;
   etag: string;
   uploaded: Date;
   httpEtag: string;
-  checksums: Record<string, string> = {};
+  checksums = {} as R2Checksums;
+  storageClass: string = 'standard';
+  writeHttpMetadata: (headers: Headers) => void = () => {};
 
   constructor(key: string, size: number) {
     this.key = key;
@@ -67,7 +69,7 @@ class R2ObjectStub implements R2Object {
   }
 }
 
-class LocalR2Bucket implements R2Bucket {
+class LocalR2Bucket {
   async head(key: string): Promise<R2Object | null> {
     const p = path.join(UPLOAD_DIR, key);
     try {
@@ -86,9 +88,9 @@ class LocalR2Bucket implements R2Bucket {
     try {
       const data = fs.readFileSync(p);
       const stat = fs.statSync(p);
-      const obj = new R2ObjectStub(key, stat.size) as R2ObjectBody;
+      const obj = new R2ObjectStub(key, stat.size) as unknown as R2ObjectBody;
       (obj as any).body = data;
-      return obj as R2ObjectBody;
+      return obj;
     } catch {
       return null;
     }
@@ -136,7 +138,7 @@ class LocalR2Bucket implements R2Bucket {
 }
 
 // ── AI stub ───────────────────────────────────────────────────────────
-class LocalAI implements Ai {
+class LocalAI {
   async run(_model: string, _inputs: any, _options?: any): Promise<any> {
     console.warn('[AI] stub – no real AI available locally');
     return null;
@@ -224,9 +226,8 @@ export async function startDevServer(app: Hono<any>, port: number = 3000): Promi
       server = serve({
         fetch: wrapped.fetch,
         port,
-      }, (listener) => {
-        const addr = listener.address();
-        const host = typeof addr === 'string' ? addr : `http://localhost:${addr?.port || port}`;
+      }, (info) => {
+        const host = `http://localhost:${info.port}`;
         console.log(`\n🚀 Local dev server at ${host}\n`);
         resolve(server!);
       });

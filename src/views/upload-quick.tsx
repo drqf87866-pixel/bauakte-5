@@ -1,6 +1,8 @@
-﻿import { jsx, Fragment } from 'hono/jsx';
+﻿import { jsx } from 'hono/jsx';
 import { Layout, Flash } from './layout';
 import type { User, Project, Phase } from '../db/schema';
+import { SelectField, InputField, FileInputField } from '../components/ui/input';
+import { Button } from '../components/ui/button';
 
 export function QuickUploadPage({
   user, projects, phasesByProject, error,
@@ -20,52 +22,33 @@ export function QuickUploadPage({
 
         <Flash error={error} />
 
-        <form method='post' action='/upload-quick' encType='multipart/form-data' data-upload-form class='bg-white rounded-lg shadow-sm border p-5 space-y-4'>
-          <div>
-            <label class='block text-base font-semibold mb-2 text-slate-800' for='project_id'>Projekt</label>
-            <select name='project_id' id='project_id' required
-              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base'>
-              <option value=''>– Projekt wählen –</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
+        <form method='post' action='/upload-quick' encType='multipart/form-data' data-upload-form class='card space-y-4'>
+          <SelectField name='project_id' id='project_id' label='Projekt' required>
+            <option value=''>– Projekt w&auml;hlen –</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </SelectField>
 
-          <div>
-            <label class='block text-base font-semibold mb-2 text-slate-800' for='phase_id'>Bauphase</label>
-            <select name='phase_id' id='phase_id' required
-              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base'>
-              <option value=''>– Phase wählen –</option>
-              {projects.map((p) => (
-                (phasesByProject[p.id] || []).map((ph) => (
-                  <option key={ph.id} value={ph.id} data-project={p.id} class='phase-option'>
-                    {p.name} → {ph.name}
-                  </option>
-                ))
-              ))}
-            </select>
-          </div>
+          <SelectField name='phase_id' id='phase_id' label='Bauphase' required>
+            <option value=''>– Phase w&auml;hlen –</option>
+            {projects.map((p) => (
+              (phasesByProject[p.id] || []).map((ph) => (
+                <option key={ph.id} value={ph.id} data-project={p.id} class='phase-option'>
+                  {p.name} &rarr; {ph.name}
+                </option>
+              ))
+            ))}
+          </SelectField>
 
-          <div>
-            <label class='block text-base font-semibold mb-2 text-slate-800' for='file'>Datei</label>
-            <input type='file' name='file' id='file'
-              accept='image/*,video/*,.pdf,.doc,.docx'
-              capture='environment'
-              required
-              class='w-full text-base text-slate-700 file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-base file:font-bold file:bg-amber-500 file:text-slate-900 hover:file:bg-amber-400 file:min-h-[48px] file:cursor-pointer min-h-[48px]' />
-          </div>
+          <FileInputField name='file' id='file' label='Datei'
+            accept='image/*,video/*,.pdf,.doc,.docx'
+            capture='environment'
+            required />
 
-          <div>
-            <label class='block text-base font-semibold mb-2 text-slate-800' for='notes'>Notiz (optional)</label>
-            <input type='text' name='notes' id='notes' placeholder='Kurze Beschreibung…'
-              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base' />
-          </div>
+          <InputField type='text' name='notes' id='notes' placeholder='Kurze Beschreibung…' label='Notiz (optional)' />
 
-          <button type='submit'
-            class='w-full bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition text-base font-bold min-h-[48px]'>
-            Hochladen
-          </button>
+          <Button type='submit' variant='primary' class='w-full'>Hochladen</Button>
         </form>
 
         <p class='text-xs text-slate-500 mt-4 text-center font-medium flex items-center justify-center gap-1'>

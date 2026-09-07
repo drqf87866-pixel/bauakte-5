@@ -1,4 +1,4 @@
-﻿// Simple deterministic avatar helpers (no external deps)
+import { jsx } from 'hono/jsx';
 
 const AVATAR_PALETTE = [
   { bg: 'bg-amber-500', text: 'text-white' },
@@ -13,8 +13,7 @@ const AVATAR_PALETTE = [
   { bg: 'bg-cyan-600', text: 'text-white' },
 ] as const;
 
-/** Extract initials from a name (e.g. "Max Mustermann" → "MM") */
-export function getInitials(name: string): string {
+function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
   if (parts.length === 1) {
@@ -24,7 +23,6 @@ export function getInitials(name: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Deterministic color index from a string */
 function hashColorIndex(input: string): number {
   let hash = 0;
   for (let i = 0; i < input.length; i++) {
@@ -34,7 +32,22 @@ function hashColorIndex(input: string): number {
   return Math.abs(hash) % AVATAR_PALETTE.length;
 }
 
-/** Get Tailwind classes for the avatar background/text based on the user's name */
-export function getAvatarStyle(name: string) {
+function getAvatarStyle(name: string) {
   return AVATAR_PALETTE[hashColorIndex(name)];
+}
+
+interface AvatarProps {
+  name: string;
+  size?: 'sm' | 'md';
+  class?: string;
+}
+
+export function UserAvatar({ name, size = 'md', class: extraClass = '' }: AvatarProps) {
+  const style = getAvatarStyle(name);
+  const dims = size === 'sm' ? 'w-7 h-7 text-[10px]' : 'w-8 h-8 text-xs';
+  return (
+    <div class={`${dims} rounded-full flex items-center justify-center font-bold shrink-0 ${style.bg} ${style.text} ${extraClass}`}>
+      {getInitials(name)}
+    </div>
+  );
 }
