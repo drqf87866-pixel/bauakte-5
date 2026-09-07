@@ -12,7 +12,7 @@
     "dev:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --watch",
     "build": "npm run build:css",
     "build:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --minify",
-    "deploy": "npm run build && npm run db:migrate && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:local": "node scripts/migrate-local.mjs",
