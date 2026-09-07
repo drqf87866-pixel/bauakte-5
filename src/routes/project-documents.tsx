@@ -15,7 +15,12 @@ const documentsRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null
 
 // Merged documents view: replaces the old separate gallery + per-phase pages.
 // A phase is just a filter now — selecting exactly one shows its status/notes/upload actions inline.
-documentsRoutes.get('/projects/:id/documents', requireAuth, async (c) => {
+// NOTE: paths here are relative — this router is mounted with app.route('/projects', documentsRoutes)
+// in index.tsx, which prepends '/projects' itself. (The previous gallery.tsx repeated '/projects' in
+// its own path on top of that mount prefix, which made Hono register it at the doubled
+// '/projects/projects/:id/gallery' — the actual '/projects/:id/gallery' links 404'd. Verified via a
+// standalone Hono repro; not something to reintroduce here.)
+documentsRoutes.get('/:id/documents', requireAuth, async (c) => {
   const user = c.get('user')!;
   const projectId = c.req.param('id')!;
   const project = await getProjectById(c.env.DB, projectId);
@@ -64,7 +69,7 @@ documentsRoutes.get('/projects/:id/documents', requireAuth, async (c) => {
 });
 
 // Back-compat: old bookmarked/shared "/gallery" and "/phases/:phaseId" URLs still work.
-documentsRoutes.get('/projects/:id/gallery', (c) => {
+documentsRoutes.get('/:id/gallery', (c) => {
   const projectId = c.req.param('id')!;
   const query = new URL(c.req.url).search;
   return c.redirect(`/projects/${projectId}/documents${query}`, 301);
