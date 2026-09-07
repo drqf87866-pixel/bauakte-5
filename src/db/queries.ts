@@ -29,6 +29,29 @@ export async function getUserById(db: D1Database, id: string): Promise<User | nu
     .first<User>();
 }
 
+/** Returns full user including hashed_password (for password verification) */
+export async function getUserWithPassword(
+  db: D1Database,
+  id: string
+): Promise<User & { hashed_password: string } | null> {
+  return db
+    .prepare('SELECT * FROM users WHERE id = ?')
+    .bind(id)
+    .first<User & { hashed_password: string }>();
+}
+
+export async function updateUserPassword(
+  db: D1Database,
+  userId: string,
+  hashedPassword: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE users SET hashed_password = ? WHERE id = ?')
+    .bind(hashedPassword, userId)
+    .run();
+  return result.success;
+}
+
 // ===== Sessions =====
 export async function createSession(
   db: D1Database,

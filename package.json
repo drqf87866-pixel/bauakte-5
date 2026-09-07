@@ -3,32 +3,55 @@
   "version": "1.0.0",
   "description": "Baufortschritts-Dokumentation – Cloudflare Webapp",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
-    "dev": "npm run build:css && wrangler dev",
+    "dev": "npm run build:css && node scripts/dev.mjs",
+    "dev:local": "npm run dev",
+    "dev:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --watch",
     "build": "npm run build:css",
     "build:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --minify",
     "deploy": "npm run build && wrangler deploy",
     "types": "wrangler types",
-    "db:migrate": "wrangler d1 execute bauakte-5 --file=./migrations/0001_init.sql && wrangler d1 execute bauakte-5 --file=./migrations/0002_add_tags.sql",
-    "db:migrate:local": "wrangler d1 execute bauakte-5 --local --file=./migrations/0001_init.sql && wrangler d1 execute bauakte-5 --local --file=./migrations/0002_add_tags.sql",
-    "lint": "tsc --noEmit",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:migrate:local": "node scripts/migrate-local.mjs",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "test": "vitest run"
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run lint && npm run typecheck && npm test"
   },
   "keywords": [],
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260906.1",
+    "@eslint/js": "^9.0.0",
     "@tailwindcss/cli": "^4.3.3",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.13",
     "typescript": "^7.0.2",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^5.0.0",
     "wrangler": "^4.129.0"
   },
   "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "better-sqlite3": "^13.0.3",
     "hono": "^4.13.7"
+  },
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "@parcel/watcher@2.5.1": true,
+    "esbuild@0.28.1": true,
+    "workerd@1.20260903.1": true
   }
 }

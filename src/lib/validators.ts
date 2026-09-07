@@ -48,3 +48,24 @@ export function validateLoginInput(email: string, password: string): ValidationR
   }
   return { valid: Object.keys(errors).length === 0, errors };
 }
+
+export function validatePasswordChangeInput(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string
+): ValidationResult {
+  const errors: Record<string, string> = {};
+  if (!currentPassword || currentPassword.length === 0) {
+    errors.currentPassword = 'Aktuelles Passwort ist erforderlich';
+  }
+  if (!newPassword || newPassword.length < 8) {
+    errors.newPassword = 'Neues Passwort muss mindestens 8 Zeichen lang sein';
+  }
+  if (newPassword !== confirmPassword) {
+    errors.confirmPassword = 'Die Passwörter stimmen nicht überein';
+  }
+  if (currentPassword && newPassword && currentPassword === newPassword) {
+    errors.newPassword = 'Das neue Passwort muss sich vom aktuellen unterscheiden';
+  }
+  return { valid: Object.keys(errors).length === 0, errors };
+}

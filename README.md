@@ -33,10 +33,16 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 
 ## Voraussetzungen
 
-- [Node.js](https://nodejs.org/) (v20 oder höher)
+- [Node.js](https://nodejs.org/) v20 oder höher (siehe `.nvmrc`)
 - npm (wird mit Node.js installiert)
 - [Cloudflare-Konto](https://dash.cloudflare.com/) für D1, R2 und Workers AI
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (wird über devDependencies installiert)
+
+Verwende [nvm](https://github.com/nvm-sh/nvm) oder [nvm-windows](https://github.com/coreybutler/nvm-windows) für einfaches Node-Version-Management:
+
+```bash
+nvm use  # Verwendet die Version aus .nvmrc
+```
 
 ## Installation & Setup
 
@@ -47,15 +53,17 @@ npm install
 # Datenbank-Migrationen lokal anwenden
 npm run db:migrate:local
 
-# Entwicklungsserver starten (via Wrangler)
+# Entwicklungsserver starten (lokaler Node.js-Server, NICHT wrangler dev)
 npm run dev
 ```
 
-Die App läuft standardmäßig unter `http://localhost:8788`.
+Die App läuft standardmäßig unter `http://localhost:3000`.
+
+> **Hinweis:** Der lokale Dev-Server nutzt einen eigenen Node.js-Server mit better-sqlite3 (D1-Emulation) und Dateisystem-Stubs (R2). Für Tests mit echten Cloudflare-Bindings kann `wrangler dev` separat verwendet werden (Port 8788).
 
 ### Umgebungsvariablen
 
-Die Datei `.env.example` enthält die benötigten Platzhalter. Für lokale Entwicklung werden die meisten Werte über die `wrangler.toml` und das Cloudflare-Dashboard konfiguriert.
+Kopiere `.env.example` als `.env` und passe die Werte an. Die wichtigsten Variablen sind `APP_TITLE` und `PUBLIC_URL`.
 
 ## Verfügbare Scripts
 

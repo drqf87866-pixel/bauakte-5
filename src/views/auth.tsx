@@ -1,5 +1,5 @@
 import { jsx } from 'hono/jsx';
-import { Layout } from './layout';
+import { Layout, Flash } from './layout';
 
 export function LoginPage({ error, redirect }: { error: string | null; redirect?: string }) {
   return (
@@ -68,6 +68,42 @@ export function RegisterPage({ error }: { error: string | null }) {
         <p class='mt-4 text-center text-base text-slate-600 font-medium'>
           Bereits registriert?{' '}
           <a href='/login' class='text-amber-600 hover:underline font-semibold'>Anmelden</a>
+        </p>
+      </div>
+    </Layout>
+  );
+}
+
+export function PasswordChangePage({ error, ok }: { error?: string | null; ok?: string | null }) {
+  return (
+    <Layout title='Passwort ändern'>
+      <div class='max-w-md mx-auto mt-12'>
+        <h1 class='text-2xl font-bold mb-6 text-slate-900'>Passwort ändern</h1>
+        <Flash error={error} ok={ok} />
+        <form method='post' action='/account/password' class='space-y-4' aria-label='Passwort ändern'>
+          <div>
+            <label class='block text-base font-semibold mb-2 text-slate-800' for='currentPassword'>Aktuelles Passwort</label>
+            <input type='password' name='currentPassword' id='currentPassword' required
+              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base' />
+          </div>
+          <div>
+            <label class='block text-base font-semibold mb-2 text-slate-800' for='newPassword'>Neues Passwort</label>
+            <input type='password' name='newPassword' id='newPassword' required minLength={8}
+              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base' />
+            <p class='text-xs text-slate-500 mt-1 font-medium'>Mindestens 8 Zeichen</p>
+          </div>
+          <div>
+            <label class='block text-base font-semibold mb-2 text-slate-800' for='confirmPassword'>Neues Passwort bestätigen</label>
+            <input type='password' name='confirmPassword' id='confirmPassword' required minLength={8}
+              class='w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 min-h-[48px] text-base' />
+          </div>
+          <button type='submit'
+            class='w-full bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition text-base font-bold min-h-[48px]'>
+            Passwort ändern
+          </button>
+        </form>
+        <p class='mt-4 text-center text-base text-slate-600 font-medium'>
+          <a href='/' class='text-amber-600 hover:underline font-semibold'>&larr; Zurück zu den Projekten</a>
         </p>
       </div>
     </Layout>

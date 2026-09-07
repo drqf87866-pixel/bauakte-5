@@ -57,6 +57,9 @@ app.use('*', authMiddleware);
 // Mount routes
 app.route('/', authRoutes);
 
+// Account routes (password change, etc.)
+app.route('/account', authRoutes);
+
 
 app.route('/projects', projectRoutes);
 app.route('/projects', phaseRoutes);
