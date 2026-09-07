@@ -63,8 +63,13 @@ export function Layout({
       <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' />
+        <meta name='theme-color' content='#b91c1c' />
+        <meta name='apple-mobile-web-app-capable' content='yes' />
+        <meta name='apple-mobile-web-app-status-bar-style' content='black-translucent' />
         <title>{title ? `${title} - Bauakte`: 'Bauakte'}</title>
         <link rel='stylesheet' href='/app.css' />
+        <link rel='manifest' href='/manifest.json' />
+        <link rel='apple-touch-icon' href='/icons/icon.svg' />
         <script dangerouslySetInnerHTML={{ __html: `
           // Confirm destructive actions (forms with data-confirm-delete)
           document.addEventListener('submit', function(e) {
@@ -120,10 +125,17 @@ export function Layout({
             sheet.setAttribute('aria-hidden', 'true');
           });
         `}} />
+        <script dangerouslySetInnerHTML={{ __html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js');
+            });
+          }
+        `}} />
       </head>
       <body class='bg-slate-50 min-h-screen text-slate-800'>
         {/* Desktop Top Navigation */}
-        <nav class='hidden md:block bg-white shadow-sm border-b top-header' aria-label='Hauptnavigation'>
+        <nav class='hidden md:block bg-white shadow-sm border-b border-t-4 border-t-red-700 top-header' aria-label='Hauptnavigation'>
           <div class='max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4'>
             <div class='flex items-center gap-2'>
               <a href='/' class='text-xl font-bold text-slate-900 no-underline'>Bauakte</a>
@@ -156,7 +168,7 @@ export function Layout({
 
         {/* Mobile Bottom Navigation */}
         {user && (
-          <nav class='md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900 text-white bottom-nav' aria-label='Hauptnavigation'>
+          <nav class='md:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-900 text-white bottom-nav border-t-4 border-t-red-700' aria-label='Hauptnavigation'>
             <div class='flex items-end justify-around px-2 pt-2'>
               <a href='/'
                 aria-current={active === 'projects' ? 'page' : undefined}

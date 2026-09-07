@@ -185,6 +185,30 @@ export async function startDevServer(app: Hono<any>, port: number = 3000): Promi
     await next();
   });
 
+  // Serve static files from public/ directory (PWA assets, CSS, etc.)
+  wrapped.use('/*', async (c, next) => {
+    const url = new URL(c.req.url);
+    const filePath = path.resolve(process.cwd(), 'public', url.pathname.slice(1));
+    if (filePath.startsWith(path.resolve(process.cwd(), 'public')) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mime: Record<string, string> = {
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
+        '.svg': 'image/svg+xml',
+        '.html': 'text/html',
+        '.png': 'image/png',
+        '.ico': 'image/x-icon',
+      };
+      const content = fs.readFileSync(filePath);
+      return c.newResponse(content, 200, {
+        'Content-Type': mime[ext] || 'application/octet-stream',
+        'Cache-Control': 'no-cache',
+      });
+    }
+    await next();
+  });
+
   wrapped.route('/', app as any);
 
   // Also inject env into the original app on each request
