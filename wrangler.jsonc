@@ -19,5 +19,9 @@
   ],
   "ai": {
     "binding": "AI"
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
   }
 }
