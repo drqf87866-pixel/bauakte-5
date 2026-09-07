@@ -2,7 +2,7 @@
 import type { Env, User } from '../db/schema';
 import { getProjectById, getPhaseById, getUploadById, deleteUpload, updateUploadNotes, getPendingUploadsForProject } from '../db/queries';
 import { deleteFile } from '../lib/r2';
-import { handleUpload, runAiTagging, mergeAndSaveTags } from '../lib/upload';
+import { runAiTagging, mergeAndSaveTags } from '../lib/upload';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
 import { UploadDetailPage } from '../views/upload-detail';
@@ -12,37 +12,6 @@ const uploadRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } 
 function documentsUrl(projectId: string, phaseId: string, extra: string): string {
   return `/projects/${projectId}/documents?phases=${phaseId}&${extra}`;
 }
-
-// Upload file to phase
-uploadRoutes.post('/:projectId/phases/:phaseId/upload', requireAuth, async (c) => {
-  const user = c.get('user')!;
-  const { projectId, phaseId } = c.req.param() as { projectId: string; phaseId: string };
-  const project = await getProjectById(c.env.DB, projectId);
-  if (!project) return c.notFound();
-  if (!(await canAccessProject(c.env.DB, project, user.id))) {
-    return c.text('Forbidden', 403);
-  }
-  const phase = await getPhaseById(c.env.DB, phaseId);
-  if (!phase || phase.project_id !== projectId) return c.notFound();
-
-  const form = await c.req.parseBody<{ file: File; notes: string; manual_tags: string }>();
-  const file = form['file'] as unknown as File | undefined;
-  const notes = (form.notes || '').trim();
-  const manualTags = (form.manual_tags || '').trim();
-
-  if (!file || !(file instanceof File)) {
-    return c.redirect(documentsUrl(projectId, phaseId, 'error=no-file'));
-  }
-
-  try {
-    await handleUpload(c.env, file, phaseId, user.id, notes, manualTags, c.executionCtx);
-  } catch (err) {
-    console.error('Upload failed', err);
-    return c.redirect(documentsUrl(projectId, phaseId, 'error=upload-failed'));
-  }
-
-  return c.redirect(documentsUrl(projectId, phaseId, 'ok=uploaded'));
-});
 
 // Upload detail page
 uploadRoutes.get('/uploads/:uploadId', requireAuth, async (c) => {

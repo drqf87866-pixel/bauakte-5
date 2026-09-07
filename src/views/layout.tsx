@@ -227,7 +227,18 @@ export function Layout({
             var body = document.getElementById('quick-upload-sheet-body');
             if (!body) return;
             body.innerHTML = '<div class="flex items-center justify-center py-10 text-stone-400"><svg class="animate-spin shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>';
-            fetch('/upload-quick?fragment=1')
+            // Pre-select project + phase when exactly one phase is focused in the "Dokumente"
+            // view (path /projects/{id}/documents with a single ?phases=<id>). The server
+            // validates the pair, so an invalid/mismatched combination is simply ignored.
+            var ctx = '';
+            var urlMatch = location.pathname.match(new RegExp('^/projects/([^/]+)/documents'));
+            if (urlMatch) {
+              var phasesParam = new URLSearchParams(location.search).get('phases');
+              if (phasesParam && phasesParam.indexOf(',') === -1) {
+                ctx = '&project=' + encodeURIComponent(urlMatch[1]) + '&phase=' + encodeURIComponent(phasesParam);
+              }
+            }
+            fetch('/upload-quick?fragment=1' + ctx)
               .then(function(res) { return res.text(); })
               .then(function(html) { body.innerHTML = html; })
               .catch(function() {

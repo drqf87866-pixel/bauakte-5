@@ -20,10 +20,27 @@ quickUploadRoutes.get('/upload-quick', requireAuth, async (c) => {
   for (const project of projects) {
     phasesByProject[project.id] = phasesMap.get(project.id) ?? [];
   }
+
+  // Optional pre-selection (e.g. the phase the user currently focuses in the "Dokumente"
+  // view): only accepted together, and only when the phase really belongs to that project.
+  const defaultProjectId = c.req.query('project') || '';
+  const defaultPhaseId = c.req.query('phase') || '';
+  const valid = defaultProjectId
+    && defaultPhaseId
+    && (phasesByProject[defaultProjectId] || []).some(ph => ph.id === defaultPhaseId);
+
+  const formProps = {
+    projects,
+    phasesByProject,
+    error: c.req.query('error'),
+    defaultProjectId: valid ? defaultProjectId : undefined,
+    defaultPhaseId: valid ? defaultPhaseId : undefined,
+  };
+
   if (c.req.query('fragment') === '1') {
-    return c.html(<QuickUploadForm projects={projects} phasesByProject={phasesByProject} error={c.req.query('error')} />);
+    return c.html(<QuickUploadForm {...formProps} />);
   }
-  return c.html(<QuickUploadPage user={user} projects={projects} phasesByProject={phasesByProject} error={c.req.query('error')} />);
+  return c.html(<QuickUploadPage user={user} {...formProps} />);
 });
 
 // Handle quick upload submission

@@ -1,6 +1,6 @@
 import type { Project, Phase } from '../../db/schema';
 import { Button } from '../ui/button';
-import { FileInputField, InputField, TextareaField } from '../ui/input';
+import { TextareaField } from '../ui/input';
 
 function PhaseNotesEditor({
   phaseId, projectId, notes,
@@ -42,7 +42,9 @@ function PhaseNotesEditor({
 
 /**
  * Contextual panel for exactly one focused phase within the merged "Dokumente" view:
- * status (abschließen/wieder öffnen), notes editor, and the upload form.
+ * status (abschließen/wieder öffnen) and the notes editor.
+ * Dokumente werden ausschließlich über die Schnell-Upload-Erfassung erfasst –
+ * der Button hier öffnet die Schnell-Upload-Sheet mit vorausgewählter Phase.
  * Replaces the old standalone PhaseDetailPage — same actions, now inline instead of a separate page.
  */
 export function PhaseActionPanel({ project, phase }: { project: Project; phase: Phase }) {
@@ -82,26 +84,11 @@ export function PhaseActionPanel({ project, phase }: { project: Project; phase: 
       <PhaseNotesEditor phaseId={phase.id} projectId={project.id} notes={phase.notes} />
 
       <div class='mt-4 pt-4 border-t border-stone-100'>
-        <h3 class='font-bold text-base mb-3 text-stone-900'>Dokumentation hinzuf&uuml;gen</h3>
-        <form method='post'
-          action={'/projects/' + project.id + '/phases/' + phase.id + '/upload'}
-          encType='multipart/form-data'
-          data-upload-form
-          aria-label='Dokument hochladen'
-          class='space-y-4'>
-          <FileInputField name='file' id={'file-' + phase.id} label='Datei ausw&auml;hlen (Foto, Video, PDF)'
-            accept='image/*,video/*,.pdf,.doc,.docx'
-            capture='environment'
-            required />
-          <InputField type='text' name='notes' id={'notes-' + phase.id} placeholder='Kurze Beschreibung...' label='Notiz' />
-          <InputField type='text' name='manual_tags' id={'manual_tags-' + phase.id}
-            placeholder='z. B. Heizung, Heizkörper, Erdgeschoss'
-            label='Eigene Tags (optional, Komma-getrennt)'
-            hint='Werden mit den KI-Tags zusammengeführt.' />
-          <div class='flex justify-center pt-2'>
-            <Button type='submit' variant='primary' class='w-full sm:w-auto'>Hochladen</Button>
-          </div>
-        </form>
+        <button type='button' data-quick-upload-trigger
+          class='w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-accent text-[#3a2c12] font-semibold text-base cursor-pointer hover:bg-[#b3872f] transition min-h-[48px]'>
+          <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/><polyline points='17 8 12 3 7 8'/><line x1='12' y1='3' x2='12' y2='15'/></svg>
+          Dokument/Foto hinzuf&uuml;gen
+        </button>
       </div>
     </div>
   );

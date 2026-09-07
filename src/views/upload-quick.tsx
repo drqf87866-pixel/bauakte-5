@@ -13,20 +13,26 @@ import { Button } from '../components/ui/button';
  * handling in layout.tsx instead of a full page POST — see the delegated 'submit' handler.
  * `data-qu-project` / `data-qu-phase` are hooks for the generic project→phase filter
  * delegation in layout.tsx (fixes the phase list otherwise showing every project's phases).
+ *
+ * `defaultProjectId` / `defaultPhaseId` pre-select a project+phase (e.g. the phase a user
+ * currently focuses in the "Dokumente" view); the server only accepts both when the phase
+ * actually belongs to that project (see routes/upload-quick.tsx).
  */
 export function QuickUploadForm({
-  projects, phasesByProject, error,
+  projects, phasesByProject, error, defaultProjectId, defaultPhaseId,
 }: {
   projects: Project[];
   phasesByProject: Record<string, Phase[]>;
   error?: string | null;
+  defaultProjectId?: string;
+  defaultPhaseId?: string;
 }) {
   return (
     <>
       <Flash error={error} />
       <form method='post' action='/upload-quick' encType='multipart/form-data'
         data-upload-form data-ajax-form class='space-y-4'>
-        <SelectField name='project_id' id='project_id' label='Projekt' required data-qu-project>
+        <SelectField name='project_id' id='project_id' label='Projekt' required data-qu-project value={defaultProjectId}>
           <option value=''>– Projekt w&auml;hlen –</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
@@ -36,7 +42,7 @@ export function QuickUploadForm({
         {/* Phase options for every project are all present at once (simplest to render server-side);
             the data-qu-project/data-qu-phase delegation in layout.tsx hides the ones that don't
             belong to the selected project, fixing the previous "shows every phase of every project" bug. */}
-        <SelectField name='phase_id' id='phase_id' label='Bauphase' required data-qu-phase>
+        <SelectField name='phase_id' id='phase_id' label='Bauphase' required data-qu-phase value={defaultPhaseId}>
           <option value=''>– Phase w&auml;hlen –</option>
           {projects.map((p) => (
             (phasesByProject[p.id] || []).map((ph) => (
