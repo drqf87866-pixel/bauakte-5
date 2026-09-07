@@ -47,6 +47,11 @@ export function QuickUploadPage({
 
           <InputField type='text' name='notes' id='notes' placeholder='Kurze Beschreibung…' label='Notiz (optional)' />
 
+          <InputField type='text' name='manual_tags' id='manual_tags'
+            placeholder='z. B. Heizung, Heizkörper, Erdgeschoss'
+            label='Eigene Tags (optional, Komma-getrennt)'
+            hint='Werden mit den KI-Tags zusammengeführt.' />
+
           <Button type='submit' variant='primary' class='w-full'>Hochladen</Button>
         </form>
 

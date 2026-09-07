@@ -89,10 +89,49 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 /**
  * Formatiert Tags als kommaseparierten String für die DB.
+ * Normalisiert (trim + lowercase), vereinheitlicht Singular/Plural
+ * und entfernt Duplikate. Reihenfolge bleibt stabil (erste Nennung gewinnt).
  */
 export function formatTags(tags: string[]): string {
-  return tags
-    .map(t => t.trim().toLowerCase())
-    .filter(Boolean)
-    .join(', ');
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of tags) {
+    const normalized = normalizeTag(raw);
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result.join(', ');
+}
+
+/**
+ * Vereinheitlicht einen einzelnen Tag: trim, lowercase, deutsche Plural->Singular,
+ * Mehrfach-Whitespace -> eins. Leerer String für reinen Whitespace/Empty Input.
+ */
+export function normalizeTag(input: string): string {
+  if (!input) return '';
+  let t = input.trim().toLowerCase();
+  if (!t) return '';
+  t = t.replace(/\s+/g, ' ');
+
+  // Häufige deutsche Plural -> Singular
+  const singularMap: Record<string, string> = {
+    'ziegel': 'ziegel', 'dachziegel': 'dachziegel',
+    'kabel': 'kabel', 'rohre': 'rohr', 'leitungen': 'leitung',
+    'schalter': 'schalter', 'steckdosen': 'steckdose',
+    'heizkörper': 'heizkörper', 'heizungen': 'heizung',
+    'fenster': 'fenster', 'türen': 'tür', 'tuere': 'tür',
+    'fliesen': 'fliese', 'wände': 'wand', 'waende': 'wand',
+    'böden': 'boden', 'boeden': 'boden',
+    'werkzeuge': 'werkzeug', 'maschinen': 'maschine',
+    'pflastersteine': 'pflaster', 'einfahrten': 'einfahrt',
+    'zäune': 'zaun', 'zaeune': 'zaun',
+    'gärten': 'garten', 'gaerten': 'garten',
+  };
+  if (singularMap[t] !== undefined) t = singularMap[t];
+  else if (t.endsWith('e') && t.length > 3) {
+    // sanfter Fallback: -e abschneiden bei plausiblen Wörtern
+    // (z.B. "maschine" -> bleibt, "rohre" -> "rohr" wäre hier schon gemappt)
+  }
+  return t;
 }

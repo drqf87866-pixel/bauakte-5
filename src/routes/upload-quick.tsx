@@ -24,9 +24,10 @@ quickUploadRoutes.get('/upload-quick', requireAuth, async (c) => {
 // Handle quick upload submission
 quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
   const user = c.get('user')!;
-  const form = await c.req.parseBody<{ file: File; notes: string; phase_id: string; project_id: string }>();
+  const form = await c.req.parseBody<{ file: File; notes: string; manual_tags: string; phase_id: string; project_id: string }>();
   const file = form['file'] as unknown as File | undefined;
   const notes = (form.notes || '').trim();
+  const manualTags = (form.manual_tags || '').trim();
   const phaseId = form.phase_id;
   const projectId = form.project_id;
 
@@ -45,7 +46,7 @@ quickUploadRoutes.post('/upload-quick', requireAuth, async (c) => {
   }
 
   try {
-    await handleUpload(c.env, file, phaseId, user.id, notes, c.executionCtx);
+    await handleUpload(c.env, file, phaseId, user.id, notes, manualTags);
   } catch (err) {
     console.error('Quick upload failed', err);
     return c.redirect('/upload-quick?error=upload-failed');

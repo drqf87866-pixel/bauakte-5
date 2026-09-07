@@ -7,6 +7,8 @@ import {
   getUploadsForPhasePaginated,
   getPhaseTags,
   completePhase,
+  reopenPhase,
+  updatePhaseNotes,
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
@@ -61,6 +63,38 @@ phaseRoutes.post('/:projectId/phases/:phaseId/complete', requireAuth, async (c) 
   if (!phase || phase.project_id !== projectId) return c.notFound();
   await completePhase(c.env.DB, phaseId);
   return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=phase-completed`);
+});
+
+// Reopen a completed phase
+phaseRoutes.post('/:projectId/phases/:phaseId/reopen', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const { projectId, phaseId } = c.req.param() as { projectId: string; phaseId: string };
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
+  const phase = await getPhaseById(c.env.DB, phaseId);
+  if (!phase || phase.project_id !== projectId) return c.notFound();
+  await reopenPhase(c.env.DB, phaseId);
+  return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=phase-reopened`);
+});
+
+// Save a free-text note for the phase
+phaseRoutes.post('/:projectId/phases/:phaseId/notes', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const { projectId, phaseId } = c.req.param() as { projectId: string; phaseId: string };
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project) return c.notFound();
+  if (!(await canAccessProject(c.env.DB, project, user.id))) {
+    return c.text('Forbidden', 403);
+  }
+  const phase = await getPhaseById(c.env.DB, phaseId);
+  if (!phase || phase.project_id !== projectId) return c.notFound();
+  const form = await c.req.parseBody<{ notes: string }>();
+  const notes = (form.notes || '').trim().slice(0, 4000);
+  await updatePhaseNotes(c.env.DB, phaseId, notes);
+  return c.redirect(`/projects/${projectId}/phases/${phaseId}?ok=phase-note-saved`);
 });
 
 export default phaseRoutes;

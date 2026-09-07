@@ -14,6 +14,8 @@ const FLASH_MESSAGES: Record<string, string> = {
   'retag-failed': 'KI-Analyse ist erneut fehlgeschlagen.',
   'retag-not-image': 'Nur Bilder können analysiert werden.',
   'phase-completed': 'Phase wurde abgeschlossen.',
+  'phase-reopened': 'Phase wurde wieder geöffnet.',
+  'phase-note-saved': 'Phasen-Notiz wurde gespeichert.',
   'project-created': 'Projekt wurde angelegt.',
   'project-deleted': 'Projekt wurde gelöscht.',
   'link-created': 'Einladungslink wurde erstellt.',
@@ -259,7 +261,7 @@ export function Layout({
         {/* Desktop Top Navigation */}
         {user && <DesktopNav user={user} active={active} />}
 
-        <main class='max-w-5xl mx-auto px-4 py-6 pb-24 md:pb-6'>
+        <main class='max-w-5xl mx-auto px-4 py-6 safe-bottom'>
           {children}
         </main>
 

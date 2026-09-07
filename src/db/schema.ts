@@ -41,6 +41,7 @@ export interface Phase {
   name: string;
   sort_order: number;
   status: 'in_progress' | 'completed';
+  notes: string;
   completed_at: string | null;
   created_at: string;
 }

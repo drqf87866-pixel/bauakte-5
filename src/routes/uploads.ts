@@ -20,16 +20,17 @@ uploadRoutes.post('/:projectId/phases/:phaseId/upload', requireAuth, async (c) =
   const phase = await getPhaseById(c.env.DB, phaseId);
   if (!phase || phase.project_id !== projectId) return c.notFound();
 
-  const form = await c.req.parseBody<{ file: File; notes: string }>();
+  const form = await c.req.parseBody<{ file: File; notes: string; manual_tags: string }>();
   const file = form['file'] as unknown as File | undefined;
   const notes = (form.notes || '').trim();
+  const manualTags = (form.manual_tags || '').trim();
 
   if (!file || !(file instanceof File)) {
     return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=no-file`);
   }
 
   try {
-    await handleUpload(c.env, file, phaseId, user.id, notes, c.executionCtx);
+    await handleUpload(c.env, file, phaseId, user.id, notes, manualTags);
   } catch (err) {
     console.error('Upload failed', err);
     return c.redirect(`/projects/${projectId}/phases/${phaseId}?error=upload-failed`);

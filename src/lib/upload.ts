@@ -1,5 +1,5 @@
 import type { Env, Upload } from '../db/schema';
-import { createUpload, updateUploadAiResult } from '../db/queries';
+import { createUpload, getUploadById, updateUploadAiResult } from '../db/queries';
 import { uploadFile } from './r2';
 import { analyzeImage, formatTags } from './ai-tags';
 
@@ -20,6 +20,9 @@ export interface AiTaggingTarget {
  * Runs AI auto-tagging for a single upload and persists the result
  * (tags, description, status, error) in the database.
  * Never throws – failures are recorded as tag_status='failed'.
+ *
+ * If the upload already has manually-entered tags (set during upload),
+ * those are merged with the AI-generated tags.
  */
 export async function runAiTagging(
   env: Pick<Env, 'DB' | 'R2' | 'AI'>,
@@ -48,8 +51,14 @@ export async function runAiTagging(
       return;
     }
 
+    // Merge: bestehende manuelle Tags + neue KI-Tags
+    const existing = await getUploadById(env.DB, target.uploadId);
+    const existingTags = existing?.tags ? existing.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    const aiTags = result.tags;
+    const merged = formatTags([...existingTags, ...aiTags]);
+
     await updateUploadAiResult(env.DB, target.uploadId, {
-      tags: formatTags(result.tags),
+      tags: merged,
       description: result.description.trim().slice(0, 300),
       status: 'done',
     });
@@ -65,10 +74,6 @@ export async function runAiTagging(
 /**
  * Uploads a file, creates a DB record, and triggers AI auto-tagging for images.
  * Shared between phase upload and quick upload routes.
- *
- * @param ctx - Optional ExecutionContext for background AI tagging via waitUntil.
- *              When provided, AI analysis runs after the HTTP response is sent.
- *              When omitted (e.g. in tests), AI tagging is skipped.
  */
 export async function handleUpload(
   env: Pick<Env, 'DB' | 'R2' | 'AI'>,
@@ -76,7 +81,7 @@ export async function handleUpload(
   phaseId: string,
   userId: string,
   notes: string,
-  ctx?: { waitUntil(promise: Promise<unknown>): void },
+  initialTags: string = '',
 ): Promise<UploadResult> {
   const uploadId = crypto.randomUUID();
   const { key, type } = await uploadFile(env.R2, file, phaseId, uploadId);
@@ -92,18 +97,17 @@ export async function handleUpload(
     file.type,
     file.size,
     notes,
+    formatTags(initialTags.split(',').map(t => t.trim()).filter(Boolean)),
   );
 
-  // AI auto-tagging for images — runs asynchronously after response
-  if (type === 'image' && ctx) {
-    ctx.waitUntil(
-      runAiTagging(env, {
-        uploadId,
-        type,
-        r2Key: key,
-        mimeType: file.type,
-      }),
-    );
+  // AI auto-tagging for images
+  if (type === 'image') {
+    await runAiTagging(env, {
+      uploadId,
+      type,
+      r2Key: key,
+      mimeType: file.type,
+    });
   }
 
   return { uploadId, key, type };

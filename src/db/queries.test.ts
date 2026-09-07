@@ -6,6 +6,8 @@ import {
   getProjectsForUser,
   getUploadsForPhase,
   createPhasesForProject,
+  updatePhaseNotes,
+  reopenPhase,
 } from './queries';
 
 // Create a mock D1Database
@@ -86,5 +88,28 @@ describe('getUploadsForPhase', () => {
     const db = createMockDb();
     const uploads = await getUploadsForPhase(db, 'phase-1');
     expect(uploads).toEqual([]);
+  });
+});
+
+describe('updatePhaseNotes', () => {
+  it('should call prepare with UPDATE phases and bind notes + id', async () => {
+    const db = createMockDb();
+    const result = await updatePhaseNotes(db, 'phase-1', 'Neue Notiz');
+    expect(result).toBe(true);
+    expect(db.prepare).toHaveBeenCalled();
+    const sql = (db.prepare as unknown as { mock: { calls: [string][] } }).mock.calls[0][0];
+    expect(sql.toLowerCase()).toContain('update phases');
+    expect(sql.toLowerCase()).toContain('notes');
+  });
+});
+
+describe('reopenPhase', () => {
+  it('should call prepare with UPDATE phases for reopening', async () => {
+    const db = createMockDb();
+    const result = await reopenPhase(db, 'phase-1');
+    expect(result).toBe(true);
+    const sql = (db.prepare as unknown as { mock: { calls: [string][] } }).mock.calls[0][0];
+    expect(sql.toLowerCase()).toContain('update phases');
+    expect(sql.toLowerCase()).toContain("status = 'in_progress'");
   });
 });

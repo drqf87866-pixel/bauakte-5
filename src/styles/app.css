@@ -110,6 +110,15 @@ body {
 .top-header {
   padding-top: env(safe-area-inset-top);
 }
+@utility safe-bottom {
+  /* Mobile: enough room for the 4-tab bottom-nav + safe-area. Desktop: regular spacing. */
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .safe-bottom {
+    padding-bottom: 1.5rem;
+  }
+}
 
 /* Control center animations */
 @keyframes slide-up {
