@@ -1,0 +1,2 @@
+SESSION_SECRET="dein-zufälliger-base64-schlüssel-hier"
+GEMINI_API_KEY="dein-gemini-api-key-hier"
