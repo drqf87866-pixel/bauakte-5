@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { runAiTagging } from './upload';
 import { MAX_AI_IMAGE_BYTES } from './ai-tags';
 
@@ -40,8 +40,6 @@ function createMockEnv(overrides?: { dbFirst?: () => Promise<unknown> }) {
 
   const get = vi.fn<(key: string) => Promise<object | null>>();
 
-  const run = vi.fn<(...args: unknown[]) => Promise<{ response?: string }>>();
-
   // Images-Binding-Mock: downscales to a tiny "jpeg" and returns it unchanged.
   const chain = {
     transform: vi.fn(() => chain),
@@ -63,14 +61,28 @@ function createMockEnv(overrides?: { dbFirst?: () => Promise<unknown> }) {
     db: db as unknown as D1Database,
     updates,
     get,
-    run,
     env: {
       DB: db as unknown as D1Database,
       R2: { get } as unknown as R2Bucket,
-      AI: { run } as unknown as Ai,
+      GEMINI_API_KEY: 'test-key',
       IMAGES: images as unknown as ImagesBinding,
     },
   };
+}
+
+function geminiResponse(tags: string[], description: string) {
+  return {
+    ok: true,
+    json: async () => ({
+      candidates: [
+        {
+          content: { parts: [{ text: JSON.stringify({ tags, description }) }] },
+          finishReason: 'STOP',
+        },
+      ],
+    }),
+    text: async () => '',
+  } as Response;
 }
 
 const r2Object = (size: number) => ({
@@ -79,15 +91,14 @@ const r2Object = (size: number) => ({
 });
 
 describe('runAiTagging', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('persists tags, ai_tags, description and status done on success', async () => {
-    const { env, updates, get, run } = createMockEnv();
+    const { env, updates, get } = createMockEnv();
     get.mockResolvedValue(r2Object(10));
-    run.mockResolvedValue({
-      response: JSON.stringify({
-        tags: ['Beton', 'Rohbau', 'Dach'],
-        description: 'Betonarbeiten am Rohbau',
-      }),
-    });
+    vi.stubGlobal('fetch', vi.fn(async () => geminiResponse(['Beton', 'Rohbau', 'Dach'], 'Betonarbeiten am Rohbau')));
 
     await runAiTagging(env, {
       uploadId: 'up-1',
@@ -107,9 +118,9 @@ describe('runAiTagging', () => {
   });
 
   it('marks upload as failed when the AI call throws', async () => {
-    const { env, updates, get, run } = createMockEnv();
+    const { env, updates, get } = createMockEnv();
     get.mockResolvedValue(r2Object(10));
-    run.mockRejectedValue(new Error('workers ai unavailable'));
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('Gemini API fehlgeschlagen'); }));
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -124,15 +135,21 @@ describe('runAiTagging', () => {
     expect(last).toBeDefined();
     // Fehlerfall: args = [tag_status, tag_error, uploadId] (Tags bleiben unangetastet)
     expect(last.args[0]).toBe('failed');
-    expect(last.args[1]).toContain('workers ai unavailable');
+    expect(last.args[1]).toContain('Gemini API fehlgeschlagen');
 
     consoleSpy.mockRestore();
   });
 
   it('marks upload as failed when the response cannot be parsed', async () => {
-    const { env, updates, get, run } = createMockEnv();
+    const { env, updates, get } = createMockEnv();
     get.mockResolvedValue(r2Object(10));
-    run.mockResolvedValue({ response: 'kein JSON hier' });
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: 'kein JSON hier' }] } }],
+      }),
+      text: async () => '',
+    } as Response)));
 
     await runAiTagging(env, {
       uploadId: 'up-1',
@@ -181,9 +198,9 @@ describe('runAiTagging', () => {
   });
 
   it('does not overwrite existing tags in the DB when the analysis fails', async () => {
-    const { env, updates, get, run } = createMockEnv();
+    const { env, updates, get } = createMockEnv();
     get.mockResolvedValue(r2Object(10));
-    run.mockRejectedValue(new Error('workers ai unavailable'));
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('Gemini API fehlgeschlagen'); }));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     await runAiTagging(env, {
@@ -196,13 +213,13 @@ describe('runAiTagging', () => {
     const last = updates[updates.length - 1];
     // Nur tag_status + tag_error werden geschrieben, tags/ai_tags/ai_description bleiben unangetastet
     expect(last.sql).not.toMatch(/tags/i);
-    expect(last.args).toEqual(['failed', expect.stringContaining('workers ai unavailable'), 'up-1']);
+    expect(last.args).toEqual(['failed', expect.stringContaining('Gemini API fehlgeschlagen'), 'up-1']);
 
     consoleSpy.mockRestore();
   });
 
   it('does nothing for non-image uploads', async () => {
-    const { env, updates, get, run } = createMockEnv();
+    const { env, updates, get } = createMockEnv();
 
     await runAiTagging(env, {
       uploadId: 'up-1',
@@ -212,12 +229,11 @@ describe('runAiTagging', () => {
     });
 
     expect(get).not.toHaveBeenCalled();
-    expect(run).not.toHaveBeenCalled();
     expect(updates).toHaveLength(0);
   });
 
   it('merges manual_tags with new AI tags and writes ai_tags separately', async () => {
-    const { env, updates, get, run } = createMockEnv({
+    const { env, updates, get } = createMockEnv({
       dbFirst: async () => ({
         manual_tags: 'Manuell1, Manuell2',
         ai_tags: '',
@@ -225,12 +241,7 @@ describe('runAiTagging', () => {
       }),
     });
     get.mockResolvedValue(r2Object(1));
-    run.mockResolvedValue({
-      response: JSON.stringify({
-        tags: ['Beton', 'Manuell1'],
-        description: 'Test',
-      }),
-    });
+    vi.stubGlobal('fetch', vi.fn(async () => geminiResponse(['Beton', 'Manuell1'], 'Test')));
 
     await runAiTagging(env, {
       uploadId: 'up-1',

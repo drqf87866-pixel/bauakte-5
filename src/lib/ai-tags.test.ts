@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { normalizeTag, formatTags, arrayBufferToBase64, analyzeImage, classifyAiError, runWithRetry, AiAnalysisError } from './ai-tags';
 
 describe('normalizeTag', () => {
@@ -91,21 +91,47 @@ function mockImagesWithOutput(output: { response: () => Response } | { reject: u
   return { images, chain };
 }
 
-function makeEnv(images: unknown, run: (inputs: unknown) => Promise<unknown>) {
+function makeGeminiResponse(tags: string[], description: string) {
   return {
-    AI: { run: vi.fn(run) } as unknown as Ai,
+    candidates: [
+      {
+        content: {
+          parts: [{ text: JSON.stringify({ tags, description }) }],
+        },
+        finishReason: 'STOP',
+      },
+    ],
+  };
+}
+
+function makeEnv(
+  images: unknown,
+  fetchImpl?: typeof fetch
+) {
+  const fetchMock = vi.fn(fetchImpl ?? (async () => ({
+    ok: true,
+    json: async () => makeGeminiResponse(['Dach', 'Dachstuhl'], 'Dachstuhl im Bau'),
+    text: async () => '',
+  } as Response)));
+
+  return {
+    GEMINI_API_KEY: 'test-key',
     IMAGES: images as unknown as ImagesBinding,
+    _fetchMock: fetchMock,
   };
 }
 
 describe('analyzeImage', () => {
-  it('downscales via the Images binding and sends a jpeg data-url to the AI', async () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('downscales via the Images binding and sends a jpeg data-url to the Gemini API', async () => {
     const { images, chain } = mockImagesWithOutput({
       response: () => new Response(new Uint8Array([1, 2, 3])),
     });
-    const env = makeEnv(images, async () => ({
-      response: JSON.stringify({ tags: ['Dach', 'Dachstuhl'], description: 'Dachstuhl im Bau' }),
-    }));
+    const env = makeEnv(images);
+    vi.stubGlobal('fetch', env._fetchMock);
 
     const result = await analyzeImage(env, new ReadableStream(), 'image/jpeg');
 
@@ -115,23 +141,32 @@ describe('analyzeImage', () => {
     );
     expect(chain.output).toHaveBeenCalledWith({ format: 'image/jpeg', quality: 80 });
 
-    const aiCall = (env.AI.run as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(aiCall[0]).toBe('@cf/meta/llama-3.2-11b-vision-instruct');
-    expect(aiCall[1].image).toMatch(/^data:image\/jpeg;base64,AQID$/);
+    const [url, options] = env._fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toContain('gemini-3.5-flash-lite:generateContent');
+    expect(url).toContain('key=test-key');
+    expect(options.method).toBe('POST');
+    expect(options.headers).toEqual({ 'Content-Type': 'application/json' });
+
+    const body = JSON.parse(options.body as string);
+    expect(body.contents[0].parts[0].inline_data.mime_type).toBe('image/jpeg');
+    expect(body.contents[0].parts[0].inline_data.data).toMatch(/^[A-Za-z0-9+/=]+$/);
+    expect(body.contents[0].parts[1].text).toContain('Baustellenfoto');
+    expect(body.generationConfig.response_mime_type).toBe('application/json');
 
     expect(result).toEqual({ tags: ['Dach', 'Dachstuhl'], description: 'Dachstuhl im Bau' });
   });
 
-  it('returns null for non-image mime types without calling the AI', async () => {
+  it('returns null for non-image mime types without calling the API', async () => {
     const { images } = mockImagesWithOutput({
       response: () => new Response(new Uint8Array([1, 2, 3])),
     });
-    const env = makeEnv(images, async () => ({ response: '{}' }));
+    const env = makeEnv(images);
+    vi.stubGlobal('fetch', env._fetchMock);
 
     const result = await analyzeImage(env, new ReadableStream(), 'application/pdf');
 
     expect(result).toBeNull();
-    expect(env.AI.run).not.toHaveBeenCalled();
+    expect(env._fetchMock).not.toHaveBeenCalled();
     expect(images.input).not.toHaveBeenCalled();
   });
 
@@ -139,7 +174,14 @@ describe('analyzeImage', () => {
     const { images } = mockImagesWithOutput({
       response: () => new Response(new Uint8Array([1, 2, 3])),
     });
-    const env = makeEnv(images, async () => ({ response: 'kein JSON' }));
+    const env = makeEnv(images, async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{ content: { parts: [{ text: 'kein JSON hier' }] } }],
+      }),
+      text: async () => '',
+    } as Response));
+    vi.stubGlobal('fetch', env._fetchMock);
 
     const result = await analyzeImage(env, new ReadableStream(), 'image/jpeg');
 
@@ -148,12 +190,77 @@ describe('analyzeImage', () => {
 
   it('throws a descriptive German error when the Images binding fails', async () => {
     const { images } = mockImagesWithOutput({ reject: new Error('invalid image') });
-    const env = makeEnv(images, async () => ({ response: '{}' }));
+    const env = makeEnv(images);
+    vi.stubGlobal('fetch', env._fetchMock);
 
     await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
       'Bild konnte nicht für die KI-Analyse aufbereitet werden'
     );
-    expect(env.AI.run).not.toHaveBeenCalled();
+    expect(env._fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws when GEMINI_API_KEY is missing', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images);
+    env.GEMINI_API_KEY = '';
+    vi.stubGlobal('fetch', env._fetchMock);
+
+    await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
+      'GEMINI_API_KEY'
+    );
+    expect(env._fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('throws when Gemini returns HTTP 429', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({
+      ok: false,
+      status: 429,
+      text: async () => 'Rate limit exceeded',
+    } as Response));
+    vi.stubGlobal('fetch', env._fetchMock);
+
+    await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
+      'Gemini API 429'
+    );
+  });
+
+  it('throws when Gemini returns HTTP 503 (overloaded)', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({
+      ok: false,
+      status: 503,
+      text: async () => 'Service overloaded',
+    } as Response));
+    vi.stubGlobal('fetch', env._fetchMock);
+
+    await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
+      'Gemini API 503'
+    );
+  });
+
+  it('handles Gemini response with safety block', async () => {
+    const { images } = mockImagesWithOutput({
+      response: () => new Response(new Uint8Array([1, 2, 3])),
+    });
+    const env = makeEnv(images, async () => ({
+      ok: true,
+      json: async () => ({
+        promptFeedback: { blockReason: 'SAFETY' },
+      }),
+      text: async () => '',
+    } as Response));
+    vi.stubGlobal('fetch', env._fetchMock);
+
+    await expect(analyzeImage(env, new ReadableStream(), 'image/jpeg')).rejects.toThrow(
+      'blockiert'
+    );
   });
 });
 
@@ -168,6 +275,13 @@ describe('classifyAiError', () => {
     expect(classifyAiError({ status: 3040 })).toBe('capacity');
     expect(classifyAiError(new Error('3040 out of capacity'))).toBe('capacity');
     expect(classifyAiError(new Error('no more data centers to forward'))).toBe('capacity');
+  });
+
+  it('returns capacity for 500/503 overloaded errors', () => {
+    expect(classifyAiError({ status: 500 })).toBe('capacity');
+    expect(classifyAiError({ status: 503 })).toBe('capacity');
+    expect(classifyAiError(new Error('overloaded'))).toBe('capacity');
+    expect(classifyAiError(new Error('service unavailable'))).toBe('capacity');
   });
 
   it('returns model_unavailable for 5035 errors', () => {
@@ -202,6 +316,15 @@ describe('runWithRetry', () => {
   it('retries on capacity error (3040)', async () => {
     const fn = vi.fn()
       .mockRejectedValueOnce(new Error('3040 out of capacity'))
+      .mockResolvedValueOnce('ok');
+    const result = await runWithRetry(fn, 2);
+    expect(result).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('retries on capacity error (503 overloaded)', async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce({ status: 503 })
       .mockResolvedValueOnce('ok');
     const result = await runWithRetry(fn, 2);
     expect(result).toBe('ok');

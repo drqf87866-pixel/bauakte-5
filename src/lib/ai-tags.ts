@@ -10,6 +10,21 @@ const CONSTRUCTION_KEYWORDS = [
   'Werkzeug', 'Maschine', 'Baumaterial', 'Fundament', 'Keller',
 ] as const;
 
+const GEMINI_MODEL = 'gemini-3.5-flash-lite';
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+const TAGGING_PROMPT = `Du analysierst ein Baustellenfoto für eine Baufortschritts-Dokumentation.
+Antworte NUR mit einem JSON-Objekt in diesem Format, ohne zusätzlichen Text:
+{
+  "tags": ["tag1", "tag2", "tag3"],
+  "description": "Kurze deutsche Beschreibung (max 20 Wörter)"
+}
+
+Gib 3-8 relevante deutsche Tags aus der folgenden Liste (oder sinnvolle eigene) und eine kurze Beschreibung dessen, was auf dem Foto zu sehen ist.
+Mögliche Tags: ${CONSTRUCTION_KEYWORDS.join(', ')}
+
+Beachte: Das Foto zeigt Bauarbeiten oder Baufortschritt.`;
+
 export type AiTagResult = {
   tags: string[];
   description: string;
@@ -36,10 +51,14 @@ export function classifyAiError(err: unknown): AiErrorType {
   const errObj = err as Record<string, unknown> | null;
   const status = typeof errObj?.status === 'number' ? errObj.status : undefined;
 
+  // Gemini: 429 = quota/rate limit, 500/503 = overload
   if (status === 429 || msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) {
     return 'rate_limited';
   }
   if (status === 3040 || msg.includes('3040') || msg.includes('out of capacity') || msg.includes('no more data centers')) {
+    return 'capacity';
+  }
+  if (status === 500 || status === 503 || msg.includes('overloaded') || msg.includes('unavailable')) {
     return 'capacity';
   }
   if (status === 5035 || msg.includes('5035') || msg.includes('requires workers paid') || msg.includes('model not available')) {
@@ -78,7 +97,7 @@ export async function runWithRetry<T>(
 }
 
 type AnalyzeImageEnv = {
-  AI: Ai;
+  GEMINI_API_KEY: string;
   IMAGES: ImagesBinding;
 };
 
@@ -88,7 +107,7 @@ const AI_IMAGE_MAX_DIMENSION = 1024;
 const AI_IMAGE_QUALITY = 80;
 
 /**
- * Analysiert ein Bild via Cloudflare Workers AI (Llama 3.2 Vision)
+ * Analysiert ein Bild via Gemini API (gemini-3.5-flash-lite)
  * und generiert automatisch Tags und eine Beschreibung.
  * Nur für Bilder – Videos und Dokumente werden übersprungen.
  *
@@ -110,35 +129,64 @@ export async function analyzeImage(
     return null;
   }
 
+  if (!env.GEMINI_API_KEY) {
+    throw new AiAnalysisError(
+      'GEMINI_API_KEY ist nicht konfiguriert. Bitte auf aistudio.google.com einen Key erstellen und unter .dev.vars (lokal) oder wrangler secret put (Prod) konfigurieren.',
+      'model_unavailable'
+    );
+  }
+
   // Bild für die KI verkleinern und als JPEG ausgeben
   const buffer = await downscaleForAnalysis(env.IMAGES, imageStream);
 
   // Bild als Base64 für das AI-Modell kodieren
   const base64 = arrayBufferToBase64(buffer);
-  const dataUrl = `data:image/jpeg;base64,${base64}`;
 
-  const response = await env.AI.run(
-    '@cf/meta/llama-3.2-11b-vision-instruct',
-    {
-      image: dataUrl as string & NonNullable<unknown>,
-      prompt: `Du analysierst ein Baustellenfoto für eine Baufortschritts-Dokumentation.
-Antworte NUR mit einem JSON-Objekt in diesem Format, ohne zusätzlichen Text:
-{
-  "tags": ["tag1", "tag2", "tag3"],
-  "description": "Kurze deutsche Beschreibung (max 20 Wörter)"
-}
+  const url = `${GEMINI_API_BASE}/models/${GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+  const body = {
+    contents: [
+      {
+        parts: [
+          { inline_data: { mime_type: 'image/jpeg', data: base64 } },
+          { text: TAGGING_PROMPT },
+        ],
+      },
+    ],
+    generationConfig: { response_mime_type: 'application/json', temperature: 0.2 },
+  };
 
-Gib 3-8 relevante deutsche Tags aus der folgenden Liste (oder sinnvolle eigene) und eine kurze Beschreibung dessen, was auf dem Foto zu sehen ist.
-Mögliche Tags: ${CONSTRUCTION_KEYWORDS.join(', ')}
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
-Beachte: Das Foto zeigt Bauarbeiten oder Baufortschritt.`,
-    }
-  );
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    const err = new Error(`Gemini API ${res.status}: ${errText.slice(0, 200)}`);
+    (err as unknown as { status: number }).status = res.status;
+    throw err;
+  }
 
-  // Antwort parsen – sie kann als { response: string } oder direkt als Text kommen
-  const rawText = typeof response === 'object' && response !== null && 'response' in response
-    ? (response as { response: string }).response
-    : String(response);
+  const data = await res.json() as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string }> };
+      finishReason?: string;
+    }>;
+    promptFeedback?: { blockReason?: string };
+  };
+
+  const blockReason = data.promptFeedback?.blockReason;
+  if (blockReason) {
+    throw new Error(`Analyse blockiert (${blockReason}): Bildinhalt nicht für KI-Analyse geeignet`);
+  }
+
+  const parts = data.candidates?.[0]?.content?.parts;
+  if (!parts?.length) {
+    throw new Error('Leere Antwort von der KI empfangen');
+  }
+
+  const rawText = parts.map(p => p.text ?? '').join('');
 
   return parseAiResponse(rawText);
 }

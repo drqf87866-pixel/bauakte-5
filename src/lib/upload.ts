@@ -28,7 +28,7 @@ export interface AiTaggingTarget {
  * When retagging, previous ai_tags are replaced; manual_tags are kept.
  */
 export async function runAiTagging(
-  env: Pick<Env, 'DB' | 'R2' | 'AI' | 'IMAGES'>,
+  env: Pick<Env, 'DB' | 'R2' | 'GEMINI_API_KEY' | 'IMAGES'>,
   target: AiTaggingTarget
 ): Promise<void> {
   if (target.type !== 'image') return;
@@ -119,7 +119,7 @@ export interface WaitUntil {
 }
 
 export async function handleUpload(
-  env: Pick<Env, 'DB' | 'R2' | 'AI' | 'IMAGES'>,
+  env: Pick<Env, 'DB' | 'R2' | 'GEMINI_API_KEY' | 'IMAGES'>,
   file: File,
   phaseId: string,
   userId: string,

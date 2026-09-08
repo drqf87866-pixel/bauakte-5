@@ -3,7 +3,7 @@ export interface Env {
   DB: D1Database;
   R2: R2Bucket;
 
-  AI: Ai;
+  GEMINI_API_KEY: string;
   IMAGES: ImagesBinding;
 }
 

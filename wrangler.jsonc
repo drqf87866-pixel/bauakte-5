@@ -17,9 +17,6 @@
       "bucket_name": "bauakte-5"
     }
   ],
-  "ai": {
-    "binding": "AI"
-  },
   "images": {
     "binding": "IMAGES"
   },

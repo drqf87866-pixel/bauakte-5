@@ -12,7 +12,7 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 | **Tailwind CSS v4** | CSS-First Styling |
 | **D1 (SQLite)** | Datenbank (Cloudflare) |
 | **R2 Object Storage** | Datei-/Medienspeicher |
-| **Cloudflare Workers AI** | KI-Auto-Tagging (Llama 3.2 Vision) |
+| **Google Gemini API** | KI-Auto-Tagging (gemini-3.5-flash-lite) |
 | **Vitest** | Testing |
 | **ESLint** (flat config) | Linting |
 | **Prettier** | Code-Formatierung |
@@ -23,7 +23,7 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 - **Projekte verwalten** – CRUD für Bauprojekte mit Adresse und Beschreibung
 - **8 standardisierte Bauphasen** – Werden automatisch pro Projekt angelegt (Rohbau, Dach & Fassade, etc.)
 - **Medien-Uploads** – Bilder, Videos und PDFs pro Phase (mit R2-Speicher)
-- **KI-Auto-Tagging** – Automatische Bildanalyse und Verschlagwortung via Llama 3.2 Vision
+- **KI-Auto-Tagging** – Automatische Bildanalyse und Verschlagwortung via Gemini (Free Tier)
 - **Paginierung** – Uploads werden seitenweise dargestellt (20 pro Seite)
 - **Projekt-Sharing** – Einladungslinks zum Teilen von Projekten mit anderen Nutzern
 - **Mobile-First** – Responsives Design mit Bottom-Navigation auf Mobilgeräten
@@ -35,7 +35,8 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 
 - [Node.js](https://nodejs.org/) v22 oder höher (siehe `.nvmrc`)
 - [pnpm](https://pnpm.io/installation) v12 oder höher
-- [Cloudflare-Konto](https://dash.cloudflare.com/) für D1, R2 und Workers AI
+- [Cloudflare-Konto](https://dash.cloudflare.com/) für D1 und R2
+- [Google AI Studio](https://aistudio.google.com/apikey) für einen kostenlosen Gemini API-Key
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (wird über devDependencies installiert)
 
 Verwende [nvm](https://github.com/nvm-sh/nvm) oder [nvm-windows](https://github.com/coreybutler/nvm-windows) für einfaches Node-Version-Management:
@@ -59,7 +60,7 @@ pnpm run dev
 
 Die App läuft standardmäßig unter `http://localhost:8788` (den aktuellen Port zeigt die Konsolenausgabe an).
 
-> **Hinweis:** Der Dev-Server nutzt `wrangler dev` mit lokal emulierten Bindings (D1, R2, Images) über miniflare. Das AI-Binding greift auch lokal auf die Remote-Workers-AI-API zu.
+> **Hinweis:** Der Dev-Server nutzt `wrangler dev` mit lokal emulierten Bindungen (D1, R2, Images) über miniflare. Der Gemini API-Key wird aus `.dev.vars` gelesen.
 
 ### Umgebungsvariablen
 
@@ -146,7 +147,6 @@ pnpm run deploy
 Vor dem ersten Deployment müssen folgende Cloudflare-Ressourcen eingerichtet sein:
 - **D1-Datenbank** mit dem Binding `DB`
 - **R2-Bucket** mit dem Binding `R2`
-- **Workers AI** mit dem Binding `AI`
 
 ## Produktiv-Umgebung (Cloudflare)
 
@@ -169,6 +169,9 @@ Nach dem Anlegen der D1-Datenbank erhältst du eine `database_id`, die in der `w
 ```bash
 # SESSION_SECRET – sicherer Zufallsstring zur Session-Cookie-Signierung
 wrangler secret put SESSION_SECRET
+
+# GEMINI_API_KEY – API-Key für Google Gemini (kostenlos unter aistudio.google.com/apikey)
+wrangler secret put GEMINI_API_KEY
 ```
 
 Generiere einen starken Schlüssel, z.B. mit:
@@ -178,8 +181,10 @@ openssl rand -base64 32
 
 ### 3. Bindings & Environment Variables
 
-Alle Bindings (`DB`, `R2`, `AI`) sind bereits in der `wrangler.jsonc` konfiguriert.  
+Alle Bindings (`DB`, `R2`) sind bereits in der `wrangler.jsonc` konfiguriert.  
 Die `database_id` muss nach dem Erstellen der D1-Datenbank aktualisiert werden.
+
+Der `GEMINI_API_KEY` muss als Secret gesetzt werden (siehe oben). Free-Tier-Limits: 15 Anfragen/Minute, 500 Anfragen/Tag.
 
 Environment-Variablen können im Cloudflare-Dashboard gesetzt werden:
 
@@ -224,8 +229,8 @@ pnpm run deploy
 |---|---|---|---|
 | `DB` | D1 Binding | `database_id = "abc123..."` | SQLite-Datenbank für alle Daten |
 | `R2` | R2 Bucket Binding | `bucket_name = "bauakte-5"` | Datei-/Medienspeicher |
-| `AI` | Workers AI | (automatisch) | KI-Bildanalyse (Llama 3.2 Vision) |
 | `SESSION_SECRET` | Secret (via CLI) | `openssl rand -base64 32` | Session-Cookie-Signierung |
+| `GEMINI_API_KEY` | Secret (via CLI) | (von aistudio.google.com) | Google Gemini API-Key (Free Tier) |
 
 Lokal wird `SESSION_SECRET` über `.dev.vars` bereitgestellt (vom Wrangler-Dev-Server automatisch geladen).
 
