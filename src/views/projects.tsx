@@ -4,7 +4,6 @@ import type { ProjectStatsMap, PhaseMediaCount, TopTagItem } from '../db/queries
 import { Button } from '../components/ui/button';
 import { InputField, TextareaField } from '../components/ui/input';
 import { Alert } from '../components/ui/alert';
-import { ProgressBar } from '../components/ui/progress-bar';
 import { ProjectTabs } from '../components/layout/project-tabs';
 
 export function DashboardPage({
@@ -41,29 +40,22 @@ export function DashboardPage({
         <div class="grid gap-4 grid-cols-1 md:grid-cols-2">
           {projects.map((project) => {
             const s = stats[project.id];
-            const progress = s && s.totalPhases > 0
-              ? Math.round((s.completedPhases / s.totalPhases) * 100)
-              : 0;
             return (
               <a href={"/projects/" + project.id}
                 class="card-interactive min-h-[80px]"
-                aria-label={project.name + (project.address ? ", " + project.address : "") + " \u2013 " + (s ? s.completedPhases + "/" + s.totalPhases + " Phasen" : "Neu")}>
+                aria-label={project.name + (project.address ? ", " + project.address : "")}>
                 <div class="flex items-start justify-between mb-2">
                   <h2 class="text-lg font-bold text-stone-900">{project.name}</h2>
                 </div>
                 {project.address && (
                   <p class="text-sm text-stone-700 mb-2 font-medium">{project.address}</p>
                 )}
-                {s && (
+                {s && s.uploadCount > 0 && (
                   <div class="mt-3 pt-3 border-t border-stone-100">
-                    <div class="flex items-center justify-between text-sm text-stone-600 font-medium mb-1.5">
-                      <span>{s.completedPhases}/{s.totalPhases} Phasen &middot; {progress}%</span>
-                      <span class="flex items-center gap-1">
-                        <svg class="shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
-                        {s.uploadCount} {s.uploadCount === 1 ? "Dokument" : "Dokumente"}
-                      </span>
-                    </div>
-                    <ProgressBar value={s.completedPhases} max={s.totalPhases} size="sm" />
+                    <span class="flex items-center gap-1 text-sm text-stone-600 font-medium">
+                      <svg class="shrink-0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+                      {s.uploadCount} {s.uploadCount === 1 ? "Dokument" : "Dokumente"}
+                    </span>
                   </div>
                 )}
                 {!s && (
@@ -101,7 +93,7 @@ export function NewProjectPage({ user, error }: { user: User; error: string | nu
 }
 
 /**
- * Project "Übersicht" (workspace home): progress, phase status at a glance, manage actions.
+ * Project "Übersicht" (workspace home): phase status at a glance, manage actions.
  * No document grid here anymore — that's the "Dokumente" tab (project-documents.tsx). This
  * split replaces the old ProjectDetailPage, which mixed both into one page.
  */
@@ -136,8 +128,6 @@ export function ProjectOverviewPage({
   pendingCount: number;
   ok?: string | null;
 }) {
-  const completedPhases = phases.filter(p => p.status === 'completed').length;
-  const totalPhases = phases.length;
   const isOwner = project.owner_id === user.id;
   const countMap = new Map(mediaCounts.map(m => [m.phase_id, m.count]));
   const documentsUrl = '/projects/' + project.id + '/documents';
@@ -156,10 +146,6 @@ export function ProjectOverviewPage({
       </div>
 
       <Flash ok={ok} />
-
-      <div class='card mb-6'>
-        <ProgressBar value={completedPhases} max={totalPhases} label='Fortschritt' />
-      </div>
 
       {/* KI-Insights */}
       {(topTags.length > 0 || pendingCount > 0) && (
@@ -214,13 +200,9 @@ export function ProjectOverviewPage({
             const count = countMap.get(phase.id) || 0;
             return (
               <a key={phase.id} href={documentsUrl + '?phases=' + phase.id}
-                class={'flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-3 min-h-[72px] text-center no-underline transition relative ' +
-                  (phase.status === 'completed'
-                    ? 'bg-white text-stone-700 border-success hover:shadow-sm'
-                    : 'bg-white text-stone-700 border-stone-200 hover:border-stone-400 hover:shadow-sm')}>
+                class='flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-stone-200 bg-white p-3 min-h-[72px] text-center text-stone-700 no-underline transition hover:border-stone-400 hover:shadow-sm'>
                 <span class='text-sm font-bold leading-tight'>{phase.name}</span>
                 <span class='text-xs font-medium opacity-75'>{count} Medien</span>
-                {phase.status === 'completed' && <svg class='shrink-0 absolute top-1 right-1 text-success' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='20 6 9 17 4 12'/></svg>}
               </a>
             );
           })}

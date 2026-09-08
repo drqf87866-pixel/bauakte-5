@@ -122,12 +122,10 @@ export function ProjectDocumentsPage({
               return (
                 <a key={p.id} href={documentsUrl(baseUrl, activePhases, activeTag, q, p.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  class={'snap-start shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition relative ' +
+                  class={'snap-start shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
                     (isActive
                       ? 'bg-stone-900 text-white'
-                      : p.status === 'completed'
-                        ? 'bg-white text-stone-700 border border-success hover:border-success'
-                        : 'bg-white text-stone-700 border border-stone-300 hover:border-stone-400')}>
+                      : 'bg-white text-stone-700 border border-stone-300 hover:border-stone-400')}>
                   {p.name} <span class={'ml-1 text-xs ' + (isActive ? 'opacity-75' : 'text-stone-500')}>{count}</span>
                 </a>
               );

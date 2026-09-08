@@ -174,27 +174,11 @@ export async function deleteProjectCascade(db: D1Database, projectId: string): P
 
 // ===== Project stats (for dashboard cards) =====
 export interface ProjectStats {
-  totalPhases: number;
-  completedPhases: number;
   uploadCount: number;
 }
 export type ProjectStatsMap = Record<string, ProjectStats>;
 
 export async function getProjectStats(db: D1Database, userId: string): Promise<ProjectStatsMap> {
-  const phaseRows = await db
-    .prepare(
-      `SELECT ph.project_id AS project_id, COUNT(*) AS total_phases,
-              SUM(CASE WHEN ph.status = 'completed' THEN 1 ELSE 0 END) AS completed_phases
-       FROM phases ph
-       JOIN projects p ON p.id = ph.project_id
-       LEFT JOIN project_collaborators pc ON pc.project_id = p.id
-       WHERE p.owner_id = ? OR pc.user_id = ?
-       GROUP BY ph.project_id`
-    )
-    .bind(userId, userId)
-    .all<{ project_id: string; total_phases: number; completed_phases: number | null }>()
-    .then(r => r.results);
-
   const uploadRows = await db
     .prepare(
       `SELECT ph.project_id AS project_id, COUNT(*) AS upload_count
@@ -210,18 +194,8 @@ export async function getProjectStats(db: D1Database, userId: string): Promise<P
     .then(r => r.results);
 
   const stats: ProjectStatsMap = {};
-  for (const row of phaseRows) {
-    stats[row.project_id] = {
-      totalPhases: row.total_phases,
-      completedPhases: row.completed_phases || 0,
-      uploadCount: 0,
-    };
-  }
   for (const row of uploadRows) {
-    if (!stats[row.project_id]) {
-      stats[row.project_id] = { totalPhases: 0, completedPhases: 0, uploadCount: 0 };
-    }
-    stats[row.project_id].uploadCount = row.upload_count;
+    stats[row.project_id] = { uploadCount: row.upload_count };
   }
   return stats;
 }
@@ -282,22 +256,6 @@ export async function getPhaseById(db: D1Database, phaseId: string): Promise<Pha
     .first<Phase>();
 }
 
-export async function completePhase(db: D1Database, phaseId: string): Promise<boolean> {
-  const result = await db
-    .prepare("UPDATE phases SET status = 'completed', completed_at = datetime('now') WHERE id = ?")
-    .bind(phaseId)
-    .run();
-  return result.success;
-}
-
-export async function reopenPhase(db: D1Database, phaseId: string): Promise<boolean> {
-  const result = await db
-    .prepare("UPDATE phases SET status = 'in_progress', completed_at = NULL WHERE id = ?")
-    .bind(phaseId)
-    .run();
-  return result.success;
-}
-
 export async function updatePhaseNotes(
   db: D1Database,
   phaseId: string,
@@ -352,7 +310,7 @@ export async function getUploadsForPhasePaginated(
   tag?: string
 ): Promise<{ uploads: Upload[]; total: number; page: number; totalPages: number }> {
   const offset = (page - 1) * PAGE_SIZE;
-  const tagClause = tag ? "AND (',' || tags || ',') LIKE '%,' || ? || ',%'" : '';
+  const tagClause = tag ? "AND (',' || REPLACE(tags, ', ', ',') || ',') LIKE '%,' || ? || ',%'" : '';
   const uploadSql = 'SELECT * FROM uploads WHERE phase_id = ? ' + tagClause + ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
   const countSql = 'SELECT COUNT(*) as count FROM uploads WHERE phase_id = ? ' + tagClause;
   const uploadStmt = tag
@@ -523,7 +481,7 @@ export async function getUploadsForProjectPaginated(
   }
 
   if (tag) {
-    whereClause += " AND (',' || u.tags || ',') LIKE '%,' || ? || ',%'";
+    whereClause += " AND (',' || REPLACE(u.tags, ', ', ',') || ',') LIKE '%,' || ? || ',%'";
     params.push(tag);
   }
 

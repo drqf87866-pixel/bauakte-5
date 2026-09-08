@@ -42,7 +42,7 @@ function PhaseNotesEditor({
 
 /**
  * Contextual panel for exactly one focused phase within the merged "Dokumente" view:
- * status (abschließen/wieder öffnen) and the notes editor.
+ * the notes editor and the quick upload trigger.
  * Dokumente werden ausschließlich über die Schnell-Upload-Erfassung erfasst –
  * der Button hier öffnet die Schnell-Upload-Sheet mit vorausgewählter Phase.
  * Replaces the old standalone PhaseDetailPage — same actions, now inline instead of a separate page.
@@ -50,35 +50,9 @@ function PhaseNotesEditor({
 export function PhaseActionPanel({ project, phase }: { project: Project; phase: Phase }) {
   return (
     <div class='card mb-6'>
-      <div class='flex flex-col md:flex-row items-start md:items-center justify-between gap-4'>
-        <div>
-          <h2 class='text-xl font-bold text-stone-900'>{phase.name}</h2>
-          <p class='text-sm text-stone-600 font-medium mt-1'>Phase {phase.sort_order}</p>
-        </div>
-        <div class='w-full md:w-auto'>
-          {phase.status === 'in_progress' && (
-            <form method='post' action={'/projects/' + project.id + '/phases/' + phase.id + '/complete'}>
-              <Button type='submit' variant='success' class='w-full md:w-auto'>
-                <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg>
-                Phase abschlie&szlig;en
-              </Button>
-            </form>
-          )}
-          {phase.status === 'completed' && (
-            <div class='flex flex-col sm:flex-row gap-2 w-full md:w-auto'>
-              <span class='block w-full md:w-auto text-center bg-success text-white px-4 py-3 rounded-xl text-base font-semibold min-h-[48px] flex items-center justify-center gap-2'>
-                <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg>
-                Abgeschlossen
-              </span>
-              <form method='post' action={'/projects/' + project.id + '/phases/' + phase.id + '/reopen'}>
-                <Button type='submit' variant='secondary' class='w-full md:w-auto'>
-                  <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='1 4 1 10 7 10'/><path d='M3.51 15a9 9 0 1 0 2.13-9.36L1 10'/></svg>
-                  Wieder &ouml;ffnen
-                </Button>
-              </form>
-            </div>
-          )}
-        </div>
+      <div>
+        <h2 class='text-xl font-bold text-stone-900'>{phase.name}</h2>
+        <p class='text-sm text-stone-600 font-medium mt-1'>Phase {phase.sort_order}</p>
       </div>
 
       <PhaseNotesEditor phaseId={phase.id} projectId={project.id} notes={phase.notes} />

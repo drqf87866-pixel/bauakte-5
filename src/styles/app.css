@@ -162,9 +162,6 @@ h1, h2, h3, h4, h5, h6 {
 @utility badge-success {
   @apply bg-success-light text-[#3c6b48] text-sm px-3 py-1.5 rounded-full font-semibold;
 }
-@utility badge-progress {
-  @apply bg-accent-light text-[#8a6a1f] text-sm px-3 py-1.5 rounded-full font-semibold;
-}
 
 /* Alerts */
 @utility alert-error {
@@ -185,14 +182,6 @@ h1, h2, h3, h4, h5, h6 {
 /* Empty state */
 @utility empty-state {
   @apply text-center py-16 px-4 bg-white rounded-2xl border border-dashed border-stone-300;
-}
-
-/* Progress bar */
-@utility progress-track {
-  @apply w-full bg-[#f0e9df] rounded-full;
-}
-@utility progress-fill {
-  @apply bg-brand rounded-full transition-all;
 }
 
 /* Safe area insets for mobile devices */

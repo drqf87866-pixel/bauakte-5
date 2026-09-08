@@ -16,8 +16,6 @@ const FLASH_MESSAGES: Record<string, string> = {
   'retagged': 'KI-Analyse wurde erneut durchgeführt.',
   'retag-failed': 'KI-Analyse ist erneut fehlgeschlagen.',
   'retag-not-image': 'Nur Bilder können analysiert werden.',
-  'phase-completed': 'Phase wurde abgeschlossen.',
-  'phase-reopened': 'Phase wurde wieder geöffnet.',
   'phase-note-saved': 'Phasen-Notiz wurde gespeichert.',
   'project-created': 'Projekt wurde angelegt.',
   'project-updated': 'Projekt wurde gespeichert.',
