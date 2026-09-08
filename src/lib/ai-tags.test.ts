@@ -33,7 +33,7 @@ describe('normalizeTag', () => {
 
 describe('formatTags', () => {
   it('joins normalized tags comma-separated', () => {
-    expect(formatTags(['Dach', 'Fassade', 'Innenausbau'])).toBe('dach, fassade, innenausbau');
+    expect(formatTags(['Dach', 'Fassade', 'Innenausbau'])).toBe('dach,fassade,innenausbau');
   });
 
   it('removes duplicates after normalization', () => {
@@ -41,11 +41,11 @@ describe('formatTags', () => {
   });
 
   it('preserves first-seen order', () => {
-    expect(formatTags(['Fassade', 'Dach', 'Dach'])).toBe('fassade, dach');
+    expect(formatTags(['Fassade', 'Dach', 'Dach'])).toBe('fassade,dach');
   });
 
   it('drops empty / whitespace-only entries', () => {
-    expect(formatTags(['Dach', '', '  ', 'Fassade'])).toBe('dach, fassade');
+    expect(formatTags(['Dach', '', '  ', 'Fassade'])).toBe('dach,fassade');
   });
 
   it('returns empty string for empty input', () => {

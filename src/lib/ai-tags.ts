@@ -246,7 +246,7 @@ export function formatTags(tags: string[]): string {
     seen.add(normalized);
     result.push(normalized);
   }
-  return result.join(', ');
+  return result.join(',');
 }
 
 /**

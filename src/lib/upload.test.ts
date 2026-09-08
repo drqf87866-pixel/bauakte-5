@@ -110,8 +110,8 @@ describe('runAiTagging', () => {
     const last = updates[updates.length - 1];
     expect(last).toBeDefined();
     // args: [tags, ai_tags, ai_description, tag_status, tag_error]
-    expect(last.args[0]).toBe('beton, rohbau, dach');  // merged tags
-    expect(last.args[1]).toBe('beton, rohbau, dach');  // ai_tags
+    expect(last.args[0]).toBe('beton,rohbau,dach'); // merged tags
+    expect(last.args[1]).toBe('beton,rohbau,dach'); // ai_tags
     expect(last.args[2]).toBe('Betonarbeiten am Rohbau'); // ai_description
     expect(last.args[3]).toBe('done');                  // tag_status
     expect(last.args[4]).toBe('');                      // tag_error
@@ -254,7 +254,7 @@ describe('runAiTagging', () => {
     expect(last).toBeDefined();
     // merged = deduplicated union: manual first, then ai, preserving order
     // Manuell1 appears in both manual and AI → deduplicated, first occurrence wins
-    expect(last.args[0]).toBe('manuell1, manuell2, beton');
+    expect(last.args[0]).toBe('manuell1,manuell2,beton');
     // ai_tags = only the new AI tags (deduplicated from ai result)
     expect(last.args[1]).toBe('beton');
   });
