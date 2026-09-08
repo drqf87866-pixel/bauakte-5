@@ -23,21 +23,31 @@ function qs(params: Record<string, string | string[] | undefined>): string {
   return parts.length > 0 ? '?' + parts.join('&') : '';
 }
 
-function documentsUrl(
+export interface DocumentsUrlToggle {
+  /** Phase filter to toggle (add if missing, remove if present). */
+  phase?: string;
+  /** Tag to activate — clicking the already-active tag deactivates it. */
+  tag?: string;
+  /** Removes the active tag filter. */
+  clearTag?: boolean;
+}
+
+export function documentsUrl(
   baseUrl: string,
   activePhases: string[],
   activeTag: string | undefined,
   q: string | undefined,
-  toggle?: string,
+  toggle?: DocumentsUrlToggle,
 ): string {
   let nextPhases = activePhases;
-  if (toggle !== undefined && toggle !== '__clear_tag__') {
-    nextPhases = activePhases.includes(toggle)
-      ? activePhases.filter(id => id !== toggle)
-      : [...activePhases, toggle];
+  if (toggle?.phase) {
+    nextPhases = activePhases.includes(toggle.phase)
+      ? activePhases.filter(id => id !== toggle.phase)
+      : [...activePhases, toggle.phase];
   }
   let nextTag: string | undefined = activeTag;
-  if (toggle === '__clear_tag__' || toggle === activeTag) nextTag = undefined;
+  if (toggle?.clearTag || (toggle?.tag && toggle.tag === activeTag)) nextTag = undefined;
+  else if (toggle?.tag) nextTag = toggle.tag;
 
   return baseUrl + qs({
     phases: nextPhases.length > 0 ? nextPhases : undefined,
@@ -92,13 +102,13 @@ export function ProjectDocumentsPage({
 
           {tags.length > 0 && (
             <div class='flex flex-wrap gap-2 mb-3'>
-              <a href={documentsUrl(baseUrl, activePhases, activeTag, q, '__clear_tag__')}
+                <a href={documentsUrl(baseUrl, activePhases, activeTag, q, { clearTag: true })}
                 class={'px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
                   (!activeTag ? 'bg-stone-900 text-white' : 'bg-stone-200 text-stone-700 hover:bg-stone-300')}>
                 Alle Tags
               </a>
               {tags.map(t => (
-                <a key={t.tag} href={documentsUrl(baseUrl, activePhases, activeTag, q, t.tag)}
+                <a key={t.tag} href={documentsUrl(baseUrl, activePhases, activeTag, q, { tag: t.tag })}
                   class={'px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
                     (activeTag === t.tag ? 'bg-stone-900 text-white' : 'bg-stone-200 text-stone-700 hover:bg-stone-300')}>
                   {t.tag} <span class={'ml-1 text-xs ' + (activeTag === t.tag ? 'opacity-75' : 'text-stone-500')}>{t.count}</span>
@@ -120,7 +130,7 @@ export function ProjectDocumentsPage({
               const isActive = activePhases.includes(p.id);
               const count = countMap.get(p.id) || 0;
               return (
-                <a key={p.id} href={documentsUrl(baseUrl, activePhases, activeTag, q, p.id)}
+                <a key={p.id} href={documentsUrl(baseUrl, activePhases, activeTag, q, { phase: p.id })}
                   aria-current={isActive ? 'page' : undefined}
                   class={'snap-start shrink-0 px-3 py-1.5 rounded-full text-sm font-semibold no-underline transition ' +
                     (isActive
@@ -287,7 +297,7 @@ export function ProjectDocumentsPage({
                 <div class='p-3 flex flex-col flex-1'>
                   <div class='flex items-center gap-2 mb-1'>
                     {phase && !focusedPhase && (
-                      <a href={documentsUrl(baseUrl, [], activeTag, undefined, phase.id)}
+                      <a href={documentsUrl(baseUrl, [], activeTag, undefined, { phase: phase.id })}
                         class='text-xs bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full font-semibold no-underline hover:bg-stone-300'>
                         {phase.name}
                       </a>
