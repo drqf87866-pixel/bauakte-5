@@ -8,7 +8,7 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 |---|---|
 | **Cloudflare Workers** | Serverless Runtime |
 | **Hono v4** | Web-Framework mit serverseitigem JSX |
-| **TypeScript v7** (strict) | Typsichere Entwicklung |
+| **TypeScript v5** (strict) | Typsichere Entwicklung |
 | **Tailwind CSS v4** | CSS-First Styling |
 | **D1 (SQLite)** | Datenbank (Cloudflare) |
 | **R2 Object Storage** | Datei-/Medienspeicher |
@@ -34,7 +34,7 @@ Eine **Cloudflare Workers**-basierte Webapp zur Baufortschritts-Dokumentation. E
 ## Voraussetzungen
 
 - [Node.js](https://nodejs.org/) v22 oder höher (siehe `.nvmrc`)
-- npm (wird mit Node.js installiert)
+- [pnpm](https://pnpm.io/installation) v12 oder höher
 - [Cloudflare-Konto](https://dash.cloudflare.com/) für D1, R2 und Workers AI
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (wird über devDependencies installiert)
 
@@ -48,36 +48,37 @@ nvm use  # Verwendet die Version aus .nvmrc
 
 ```bash
 # Abhängigkeiten installieren
-npm install
+pnpm install
 
 # Datenbank-Migrationen lokal anwenden
-npm run db:migrate:local
+pnpm run db:migrate:local
 
 # Entwicklungsserver starten (lokaler Node.js-Server, NICHT wrangler dev)
-npm run dev
+pnpm run dev
 ```
 
-Die App läuft standardmäßig unter `http://localhost:3000`.
+Die App läuft standardmäßig unter `http://localhost:8788` (den aktuellen Port zeigt die Konsolenausgabe an).
 
-> **Hinweis:** Der lokale Dev-Server nutzt einen eigenen Node.js-Server mit better-sqlite3 (D1-Emulation) und Dateisystem-Stubs (R2). Für Tests mit echten Cloudflare-Bindings kann `wrangler dev` separat verwendet werden (Port 8788).
+> **Hinweis:** Der Dev-Server nutzt `wrangler dev` mit lokal emulierten Bindings (D1, R2, Images) über miniflare. Das AI-Binding greift auch lokal auf die Remote-Workers-AI-API zu.
 
 ### Umgebungsvariablen
 
-Kopiere `.env.example` als `.env` und passe die Werte an. Die wichtigsten Variablen sind `APP_TITLE` und `PUBLIC_URL`.
+Lokale Secrets (z. B. `SESSION_SECRET`) liegen in `.dev.vars` (gitignored). Für die Produktion werden Secrets über `wrangler secret put` gesetzt (siehe unten).
 
 ## Verfügbare Scripts
 
 | Script | Beschreibung |
 |---|---|
-| `npm run dev` | Entwicklungsserver starten (Wrangler) |
-| `npm run build` | Produktions-Build (CSS) erstellen |
-| `npm run deploy` | Build + Deploy zu Cloudflare Workers (ohne DB-Migration) |
-| `npm test` | Tests ausführen (Vitest) |
-| `npm run lint` | TypeScript-Prüfung (`tsc --noEmit`) |
-| `npm run format` | Code-Formatierung mit Prettier |
-| `npm run db:migrate` | Migrationen manuell auf die D1-Produktionsdatenbank anwenden |
-| `npm run db:migrate:local` | Migrationen auf die lokale D1-Datenbank anwenden |
-| `npm run types` | Wrangler-Type-Definitionen generieren |
+| `pnpm run dev` | Entwicklungsserver starten (Wrangler) |
+| `pnpm run build` | Produktions-Build (CSS) erstellen |
+| `pnpm run deploy` | Build + Deploy zu Cloudflare Workers (ohne DB-Migration) |
+| `pnpm test` | Tests ausführen (Vitest) |
+| `pnpm run lint` | Linting (ESLint) |
+| `pnpm run typecheck` | TypeScript-Prüfung (`tsc --noEmit`) |
+| `pnpm run format` | Code-Formatierung mit Prettier |
+| `pnpm run db:migrate` | Migrationen manuell auf die D1-Produktionsdatenbank anwenden |
+| `pnpm run db:migrate:local` | Migrationen auf die lokale D1-Datenbank anwenden |
+| `pnpm run types` | Wrangler-Type-Definitionen generieren |
 
 ## Projektstruktur
 
@@ -85,7 +86,7 @@ Kopiere `.env.example` als `.env` und passe die Werte an. Die wichtigsten Variab
 ├── src/
 │   ├── auth/             # Auth-Middleware (Session-Prüfung)
 │   ├── db/               # Datenbank-Schema, Queries & Tests
-│   ├── lib/              # Hilfsfunktionen (Auth, Avatar, R2, AI-Tags, Validatoren) & Tests
+│   ├── lib/              # Hilfsfunktionen (Auth, R2, Upload, AI-Tags, Validatoren) & Tests
 │   ├── routes/           # Routen-Definitionen (Auth, Projekte, Phasen, Uploads, Share, Quick-Upload)
 │   ├── views/            # Seiten-Komponenten (JSX-Views)
 │   ├── styles/           # Tailwind CSS-Quelldatei
@@ -114,31 +115,32 @@ Die App nutzt **Cloudflare D1** (SQLite-Datenbank) mit folgenden Tabellen:
 
 ## Testing
 
-Das Projekt verwendet **Vitest** für Unit-Tests (25 Tests).
+Das Projekt verwendet **Vitest** für Unit-Tests (56 Tests in 4 Dateien).
 
 ```bash
 # Alle Tests ausführen
-npm test
+pnpm test
 
 # Tests im Watch-Modus
-npm test -- --watch
+pnpm test -- --watch
 
 # Mit Coverage-Bericht
-npm test -- --coverage
+pnpm test -- --coverage
 ```
 
 Die Tests decken folgende Bereiche ab:
 - **Database Queries** – Mock-basierte CRUD-Tests (`src/db/queries.test.ts`)
 - **Validatoren** – E-Mail-, Passwort- und Formularvalidierung (`src/lib/validators.test.ts`)
-- **Avatar-Hilfsfunktionen** – Initialen, deterministische Farben (`src/lib/avatar.test.ts`)
+- **Upload-Hilfsfunktionen** – Datei-/MIME-Typ-Validierung (`src/lib/upload.test.ts`)
+- **AI-Tags** – Tagging-Logik und Fehlerbehandlung (`src/lib/ai-tags.test.ts`)
 
 ## Deployment
 
-Das Deployment erfolgt automatisch über die **native Cloudflare Workers Git Integration** bei jedem Push auf den `main`-Branch. Der Build-Prozess führt `npm run build && wrangler deploy` aus — Datenbank-Migrationen sind davon ausgenommen.
+Das Deployment erfolgt automatisch über die **native Cloudflare Workers Git Integration** bei jedem Push auf den `main`-Branch. Der Build-Prozess führt `pnpm run build && wrangler deploy` aus — Datenbank-Migrationen sind davon ausgenommen. Cloudflare Builds erkennt pnpm automatisch anhand der `pnpm-lock.yaml` bzw. des `packageManager`-Felds in der `package.json`.
 
 ```bash
 # Manuelles Deployment (für Tests)
-npm run deploy
+pnpm run deploy
 ```
 
 Vor dem ersten Deployment müssen folgende Cloudflare-Ressourcen eingerichtet sein:
@@ -190,15 +192,15 @@ Ausführen ist dadurch gefahrlos.
 
 ```bash
 # Migrationen auf die Produktions-DB anwenden (nur ausstehende)
-npm run db:migrate
+pnpm run db:migrate
 
 # Lokal auf die Entwicklungs-DB anwenden
-npm run db:migrate:local
+pnpm run db:migrate:local
 
 # Upgrade-Pfad: DBs, die VOR dem Tracking-Runner migriert wurden (0001+0002 liegen
 # bereits an, aber ohne Tracking) – einmalig als Baseline markieren:
-npm run db:migrate -- --mark 0001_init.sql,0002_add_tags.sql
-# Lokal entsprechend: npm run db:migrate:local -- --mark 0001_init.sql,0002_add_tags.sql
+pnpm run db:migrate -- --mark 0001_init.sql,0002_add_tags.sql
+# Lokal entsprechend: pnpm run db:migrate:local -- --mark 0001_init.sql,0002_add_tags.sql
 ```
 
 > **Hinweis:** `wrangler d1 execute` gegen die Remote-DB läuft mit dem OAuth-Token aus
@@ -213,7 +215,7 @@ Das Deployment erfolgt automatisch via Git Integration bei Push auf `main`.
 Für ein manuelles Deployment:
 
 ```bash
-npm run deploy
+pnpm run deploy
 ```
 
 ### Übersicht aller Konfigurationswerte
@@ -224,8 +226,8 @@ npm run deploy
 | `R2` | R2 Bucket Binding | `bucket_name = "bauakte-5"` | Datei-/Medienspeicher |
 | `AI` | Workers AI | (automatisch) | KI-Bildanalyse (Llama 3.2 Vision) |
 | `SESSION_SECRET` | Secret (via CLI) | `openssl rand -base64 32` | Session-Cookie-Signierung |
-| `ENV.APP_TITLE` | Environment Var | `"Bauakte"` | App-Titel im Browser-Tab |
-| `ENV.PUBLIC_URL` | Environment Var | `"https://bauakte-5.drqf87866.workers.dev"` | Öffentliche URL der App |
+
+Lokal wird `SESSION_SECRET` über `.dev.vars` bereitgestellt (vom Wrangler-Dev-Server automatisch geladen).
 
 ## Lizenz
 

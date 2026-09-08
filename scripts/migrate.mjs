@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// CLI für `npm run db:migrate` (Remote) bzw. `npm run db:migrate -- --local`.
+// CLI für `pnpm run db:migrate` (Remote) bzw. `pnpm run db:migrate -- --local`.
 //
 // Optionen:
 //   --local                          gegen die lokale D1-DB statt Remote

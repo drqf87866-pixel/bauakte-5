@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "description": "Baufortschritts-Dokumentation – Cloudflare Webapp",
   "type": "module",
+  "packageManager": "pnpm@12.3.4",
   "engines": {
     "node": ">=22.0.0"
   },
   "scripts": {
-    "dev": "npm run build:css && node scripts/dev.mjs",
+    "dev": "pnpm run build:css && node scripts/dev.mjs",
     "dev:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --watch",
     "dev:wrangler": "wrangler dev",
-    "build": "npm run build:css",
+    "build": "pnpm run build:css",
     "build:css": "tailwindcss -i ./src/styles/app.css -o ./public/app.css --minify",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "pnpm run build && wrangler deploy",
     "types": "wrangler types",
     "db:migrate": "node scripts/migrate.mjs",
     "db:migrate:local": "node scripts/migrate.mjs --local",
@@ -24,7 +25,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "pnpm run lint && pnpm run typecheck && pnpm test"
   },
   "keywords": [],
   "license": "MIT",
@@ -45,10 +46,5 @@
   },
   "dependencies": {
     "hono": "^4.13.7"
-  },
-  "allowScripts": {
-    "esbuild@0.28.1": true,
-    "workerd@1.20260903.1": true,
-    "@parcel/watcher@2.5.1": true
   }
 }

@@ -8,7 +8,7 @@
  *   2. wrangler dev (Cloudflare Workers local runtime)
  *
  * Usage: node scripts/dev.mjs
- *   or:  npm run dev
+ *   or:  pnpm run dev
  */
 
 import { spawn } from 'child_process';
@@ -48,7 +48,8 @@ function startProcess(label, command, args, opts = {}) {
 }
 
 // ── 1. CSS Watch ──────────────────────────────────────────────
-startProcess('CSS', 'npx', [
+startProcess('CSS', 'pnpm', [
+  'exec',
   'tailwindcss',
   '-i', './src/styles/app.css',
   '-o', './public/app.css',
@@ -56,7 +57,8 @@ startProcess('CSS', 'npx', [
 ]);
 
 // ── 2. Wrangler Dev Server ────────────────────────────────────
-startProcess('WRANGLER', 'npx', [
+startProcess('WRANGLER', 'pnpm', [
+  'exec',
   'wrangler',
   'dev',
 ]);
