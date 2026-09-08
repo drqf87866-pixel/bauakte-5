@@ -20,16 +20,21 @@ const FLASH_MESSAGES: Record<string, string> = {
   'phase-reopened': 'Phase wurde wieder geöffnet.',
   'phase-note-saved': 'Phasen-Notiz wurde gespeichert.',
   'project-created': 'Projekt wurde angelegt.',
+  'project-updated': 'Projekt wurde gespeichert.',
   'project-deleted': 'Projekt wurde gelöscht.',
   'link-created': 'Einladungslink wurde erstellt.',
   'link-deactivated': 'Einladungslink wurde deaktiviert.',
+  'collaborator-removed': 'Mitarbeiter wurde entfernt.',
   'notes-saved': 'Notiz wurde gespeichert.',
   'tags-saved': 'Tags wurden gespeichert.',
   'batch-analyzed': 'KI-Analyse für ausstehende Bilder wurde gestartet – Fortschritt wird automatisch aktualisiert.',
+  'phase-moved': 'Dokumente wurden verschoben.',
   'no-file': 'Bitte wähle zuerst eine Datei aus.',
   'upload-failed': 'Upload fehlgeschlagen. Bitte versuche es erneut.',
   'missing-fields': 'Bitte Projekt, Bauphase und Datei angeben.',
   'password-changed': 'Passwort wurde erfolgreich geändert.',
+  'password-reset': 'Passwort wurde zurückgesetzt. Du kannst dich jetzt anmelden.',
+  'reset-link-sent': 'Wenn diese E-Mail registriert ist, wurde ein Link zum Zurücksetzen generiert. Bitte überprüfe die Konsole/Logs des Servers für den Link (E-Mail-Versand ist noch nicht implementiert).',
 };
 
 export function Flash({ error, ok }: { error?: string | null; ok?: string | null }) {
@@ -51,7 +56,7 @@ export function Layout({
   children: import('hono/jsx').Child;
 }) {
   return (
-    <html lang='de'>
+    <html lang='de' data-theme='light'>
       <head>
         <meta charset='UTF-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1.0, viewport-fit=cover' />
@@ -70,6 +75,24 @@ export function Layout({
         <link rel='apple-touch-icon' sizes='180x180' href='/icons/apple-icon-180.png' />
         <link rel='icon' type='image/svg+xml' href='/icons/icon.svg' />
         <script dangerouslySetInnerHTML={{ __html: `
+          // Dark mode
+          (function() {
+            var stored = localStorage.getItem('dark-mode');
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (stored === 'true' || (stored === null && prefersDark)) {
+              document.documentElement.classList.add('dark');
+              document.documentElement.setAttribute('data-theme', 'dark');
+            }
+          })();
+
+          function toggleDarkMode() {
+            var html = document.documentElement;
+            html.classList.toggle('dark');
+            var isDark = html.classList.contains('dark');
+            html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('dark-mode', isDark ? 'true' : 'false');
+          }
+
           function openOverlay(el) { el.classList.remove('hidden'); el.setAttribute('aria-hidden', 'false'); }
           function closeOverlay(el) { el.classList.add('hidden'); el.setAttribute('aria-hidden', 'true'); }
 

@@ -12,13 +12,14 @@ import {
   getMediaCountsByPhase,
   getTopTagsForProject,
   getPendingUploadsForProject,
+  updateProject,
 } from '../db/queries';
 import { deleteFile } from '../lib/r2';
 import { validateProjectInput } from '../lib/validators';
 import { requireAuth } from '../auth/middleware';
 import { canAccessProject } from '../lib/auth';
 import { PHASE_NAMES } from '../db/schema';
-import { DashboardPage, ProjectOverviewPage, NewProjectPage } from '../views/projects';
+import { DashboardPage, ProjectOverviewPage, NewProjectPage, EditProjectPage } from '../views/projects';
 
 const projectRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
@@ -89,6 +90,40 @@ projectRoutes.get('/:id', requireAuth, async (c) => {
       ok={c.req.query('ok')}
     />
   );
+});
+
+// Edit project form
+projectRoutes.get('/:id/edit', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const projectId = c.req.param('id')!;
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project || project.owner_id !== user.id) {
+    return c.redirect('/');
+  }
+  return c.html(<EditProjectPage user={user} project={project} error={null} />);
+});
+
+// Update project
+projectRoutes.post('/:id/edit', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const projectId = c.req.param('id')!;
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project || project.owner_id !== user.id) {
+    return c.redirect('/');
+  }
+
+  const form = await c.req.parseBody<{ name: string; address: string; description: string }>();
+  const name = (form.name || '').trim();
+  const address = (form.address || '').trim();
+  const description = (form.description || '').trim();
+
+  const validation = validateProjectInput(name, address);
+  if (!validation.valid) {
+    return c.html(<EditProjectPage user={user} project={project} error={Object.values(validation.errors)[0]} />);
+  }
+
+  await updateProject(c.env.DB, projectId, name, address, description);
+  return c.redirect(`/projects/${projectId}?ok=project-updated`);
 });
 
 // Delete project (cascades: uploads incl. R2 files, phases, share links, collaborators)

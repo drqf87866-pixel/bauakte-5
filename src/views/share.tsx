@@ -5,11 +5,12 @@ import { Button } from '../components/ui/button';
 import { ProjectTabs } from '../components/layout/project-tabs';
 
 export function SharePage({
-  user, project, shareLinks, baseUrl, ok,
+  user, project, shareLinks, collaborators, baseUrl, ok,
 }: {
   user: User;
   project: Project;
   shareLinks: ShareLink[];
+  collaborators: (User & { created_at: string })[];
   baseUrl: string;
   ok?: string | null;
 }) {
@@ -60,6 +61,31 @@ export function SharePage({
                 <Button type='submit' variant='ghost' size='sm'>
                   <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='15' y1='9' x2='9' y2='15'/><line x1='9' y1='9' x2='15' y2='15'/></svg>
                   Deaktivieren
+                </Button>
+              </form>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {collaborators.length > 0 && (
+        <div class='mt-8 space-y-3'>
+          <h2 class='font-bold text-lg mb-3 text-stone-900'>Mitarbeiter ({collaborators.length})</h2>
+          {collaborators.map((c) => (
+            <div key={c.id} class='card flex items-center justify-between gap-3'>
+              <div class='min-w-0 flex-1'>
+                <div class='font-semibold text-stone-900 truncate'>{c.name}</div>
+                <div class='text-sm text-stone-500 truncate'>{c.email}</div>
+                <div class='text-xs text-stone-400 mt-0.5'>
+                  Seit {new Date(c.created_at).toLocaleDateString('de-DE')}
+                </div>
+              </div>
+              <form method='post' action={'/projects/' + project.id + '/collaborators/' + c.id + '/remove'}
+                data-confirm-delete
+                data-confirm-message={'Mitarbeiter ' + c.name + ' aus dem Projekt entfernen?'}>
+                <Button type='submit' variant='ghost' size='sm'>
+                  <svg class='shrink-0 text-error' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='10'/><line x1='15' y1='9' x2='9' y2='15'/><line x1='9' y1='9' x2='15' y2='15'/></svg>
+                  Entfernen
                 </Button>
               </form>
             </div>

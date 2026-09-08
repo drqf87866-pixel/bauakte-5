@@ -49,9 +49,12 @@ export function UploadDetailPage({
                 class='w-full object-contain max-h-[70vh]' loading='lazy' />
             </a>
           ) : upload.type === 'video' ? (
-            <div class='rounded-xl bg-stone-900 flex items-center justify-center h-64 lg:h-80'>
-              <svg class='text-white/60' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polygon points='23 7 16 12 23 17 23 7'/><rect x='1' y='5' width='15' height='14' rx='2' ry='2'/></svg>
-            </div>
+            <video controls class='w-full rounded-xl bg-stone-900 max-h-[70vh]' aria-label='Video: {upload.filename}'>
+              <source src={'/r2/' + upload.r2_key} type={upload.mime_type} />
+              Dein Browser unterstützt kein Video-Tag.
+            </video>
+          ) : upload.mime_type === 'application/pdf' ? (
+            <embed src={'/r2/' + upload.r2_key} type='application/pdf' class='w-full h-[70vh] rounded-xl border border-stone-200' aria-label='PDF: {upload.filename}' />
           ) : (
             <div class='rounded-xl bg-stone-100 flex items-center justify-center h-64 lg:h-80 border border-stone-200'>
               <svg class='text-stone-400' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'/><polyline points='13 2 13 9 20 9'/></svg>

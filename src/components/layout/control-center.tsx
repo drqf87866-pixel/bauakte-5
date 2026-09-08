@@ -21,6 +21,11 @@ export function ControlCenter({ user }: ControlCenterProps) {
           </div>
         </div>
         <div class='p-2'>
+          <button type='button' onclick='toggleDarkMode()' data-cc-action
+            class='w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-100 transition text-stone-700 font-medium text-sm cursor-pointer border-0 bg-transparent'>
+            <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/></svg>
+            <span>Dark Mode</span>
+          </button>
           <a href='/account/password' data-cc-action
             class='flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-stone-100 transition text-stone-700 font-medium text-sm'>
             <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>
@@ -46,6 +51,11 @@ export function ControlCenter({ user }: ControlCenterProps) {
           </div>
         </div>
         <div class='p-3 pb-6'>
+          <button type='button' onclick='toggleDarkMode()' data-cc-action
+            class='w-full flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-stone-100 transition text-stone-700 font-medium cursor-pointer border-0 bg-transparent'>
+            <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z'/></svg>
+            <span>Dark Mode</span>
+          </button>
           <a href='/account/password' data-cc-action
             class='flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-stone-100 transition text-stone-700 font-medium'>
             <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>

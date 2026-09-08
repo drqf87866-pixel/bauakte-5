@@ -30,6 +30,13 @@ export async function deleteFile(r2: R2Bucket, key: string): Promise<boolean> {
   return true;
 }
 
+// Delete multiple files from R2
+export async function deleteFiles(r2: R2Bucket, keys: string[]): Promise<boolean> {
+  if (keys.length === 0) return true;
+  await r2.delete(keys);
+  return true;
+}
+
 // Get a signed/public URL for a file
 export function getFileUrl(key: string): string {
   // Files are served through the /r2/:key route

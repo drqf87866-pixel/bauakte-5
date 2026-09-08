@@ -1,16 +1,16 @@
 ﻿import { Hono } from 'hono';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import type { Env, User } from '../db/schema';
-import { createUser, getUserByEmail, getUserWithPassword, updateUserPassword, deleteUserSessions } from '../db/queries';
+import { createUser, getUserByEmail, getUserWithPassword, updateUserPassword, deleteUserSessions, createPasswordResetToken, getPasswordResetToken, markResetTokenUsed } from '../db/queries';
 import { hashPassword, verifyPassword, createUserSession, destroySession } from '../lib/auth';
 import { validateRegistrationInput, validateLoginInput, validatePasswordChangeInput } from '../lib/validators';
-import { LoginPage, RegisterPage, PasswordChangePage } from '../views/auth';
+import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage, PasswordChangePage } from '../views/auth';
 import { requireAuth } from '../auth/middleware';
 
 const authRoutes = new Hono<{ Bindings: Env; Variables: { user: User | null } }>();
 
 authRoutes.get('/login', (c) => {
-  return c.html(<LoginPage error={null} />);
+  return c.html(<LoginPage error={null} ok={c.req.query('ok')} />);
 });
 
 authRoutes.post('/login', async (c) => {
@@ -84,6 +84,71 @@ authRoutes.post('/register', async (c) => {
   });
 
   return c.redirect('/');
+});
+
+// Forgot password
+authRoutes.get('/forgot-password', (c) => {
+  return c.html(<ForgotPasswordPage />);
+});
+
+authRoutes.post('/forgot-password', async (c) => {
+  const form = await c.req.parseBody<{ email: string }>();
+  const email = (form.email || '').trim().toLowerCase();
+
+  const user = await getUserByEmail(c.env.DB, email);
+  if (!user) {
+    // Don't reveal whether the email exists
+    return c.html(<ForgotPasswordPage ok='reset-link-sent' />);
+  }
+
+  const token = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    .toISOString()
+    .replace('T', ' ')
+    .replace('Z', '');
+  await createPasswordResetToken(c.env.DB, crypto.randomUUID(), user.id, token, expiresAt);
+
+  const baseUrl = new URL(c.req.url).origin;
+  const resetLink = baseUrl + '/reset-password/' + token;
+
+  // Since there's no email infrastructure, show the link directly on the page
+  return c.html(<ForgotPasswordPage resetLink={resetLink} />);
+});
+
+// Reset password
+authRoutes.get('/reset-password/:token', async (c) => {
+  const token = c.req.param('token')!;
+  const resetToken = await getPasswordResetToken(c.env.DB, token);
+  if (!resetToken) {
+    return c.html(<ForgotPasswordPage error='Dieser Link ist ungültig oder abgelaufen.' />);
+  }
+  return c.html(<ResetPasswordPage token={token} />);
+});
+
+authRoutes.post('/reset-password/:token', async (c) => {
+  const token = c.req.param('token')!;
+  const resetToken = await getPasswordResetToken(c.env.DB, token);
+  if (!resetToken) {
+    return c.html(<ForgotPasswordPage error='Dieser Link ist ungültig oder abgelaufen.' />);
+  }
+
+  const form = await c.req.parseBody<{ password: string; confirmPassword: string }>();
+  const password = form.password || '';
+  const confirmPassword = form.confirmPassword || '';
+
+  if (password.length < 8) {
+    return c.html(<ResetPasswordPage token={token} error='Passwort muss mindestens 8 Zeichen lang sein.' />);
+  }
+  if (password !== confirmPassword) {
+    return c.html(<ResetPasswordPage token={token} error='Die Passwörter stimmen nicht überein.' />);
+  }
+
+  const hashedPassword = await hashPassword(password);
+  await updateUserPassword(c.env.DB, resetToken.user_id, hashedPassword);
+  await markResetTokenUsed(c.env.DB, resetToken.id);
+  await deleteUserSessions(c.env.DB, resetToken.user_id);
+
+  return c.redirect('/login?ok=password-reset');
 });
 
 authRoutes.post('/logout', async (c) => {

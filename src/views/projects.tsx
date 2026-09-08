@@ -105,6 +105,26 @@ export function NewProjectPage({ user, error }: { user: User; error: string | nu
  * No document grid here anymore — that's the "Dokumente" tab (project-documents.tsx). This
  * split replaces the old ProjectDetailPage, which mixed both into one page.
  */
+export function EditProjectPage({ user, project, error }: { user: User; project: Project; error: string | null }) {
+  return (
+    <Layout user={user} title={'Projekt bearbeiten - ' + project.name} active='projects'>
+      <div class='max-w-lg mx-auto'>
+        <h1 class='text-2xl font-bold mb-6 text-stone-900'>Projekt bearbeiten</h1>
+        {error && <Alert type='error'>{error}</Alert>}
+        <form method='post' action={'/projects/' + project.id + '/edit'} class='space-y-5'>
+          <InputField type='text' name='name' id='name' label='Projektname *' required value={project.name} />
+          <InputField type='text' name='address' id='address' label='Adresse' value={project.address} />
+          <TextareaField name='description' id='description' label='Beschreibung' rows={3} value={project.description} />
+          <div class='flex gap-3'>
+            <Button type='submit' variant='primary' class='flex-1'>Speichern</Button>
+            <Button href={'/projects/' + project.id} variant='ghost'>Abbrechen</Button>
+          </div>
+        </form>
+      </div>
+    </Layout>
+  );
+}
+
 export function ProjectOverviewPage({
   user, project, phases, mediaCounts, topTags, pendingCount, ok,
 }: {
@@ -210,6 +230,12 @@ export function ProjectOverviewPage({
       <div class='card'>
         <h2 class='font-bold text-sm text-stone-600 uppercase tracking-wide mb-3'>Verwalten</h2>
         <div class='flex flex-wrap gap-2'>
+          {isOwner && (
+            <Button href={'/projects/' + project.id + '/edit'} variant='secondary'>
+              <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/><path d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'/></svg>
+              Bearbeiten
+            </Button>
+          )}
           {isOwner && (
             <Button href={'/projects/' + project.id + '/share'} variant='secondary'>
               <svg class='shrink-0' aria-hidden='true' xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='18' cy='5' r='3'/><circle cx='6' cy='12' r='3'/><circle cx='18' cy='19' r='3'/><line x1='8.59' y1='13.51' x2='15.42' y2='17.49'/><line x1='15.41' y1='6.51' x2='8.59' y2='10.49'/></svg>

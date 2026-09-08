@@ -8,6 +8,8 @@ import {
   getShareLinkById,
   deactivateShareLink,
   addCollaborator,
+  getCollaboratorsForProject,
+  removeCollaborator,
 } from '../db/queries';
 import { requireAuth } from '../auth/middleware';
 import { SharePage } from '../views/share';
@@ -24,9 +26,10 @@ shareRoutes.get('/:projectId/share', requireAuth, async (c) => {
     return c.text('Forbidden', 403);
   }
   const shareLinks = await getShareLinksForProject(c.env.DB, projectId);
+  const collaborators = await getCollaboratorsForProject(c.env.DB, projectId);
   const baseUrl = new URL(c.req.url).origin;
   return c.html(
-    <SharePage user={user} project={project} shareLinks={shareLinks} baseUrl={baseUrl} ok={c.req.query('ok')} />
+    <SharePage user={user} project={project} shareLinks={shareLinks} collaborators={collaborators} baseUrl={baseUrl} ok={c.req.query('ok')} />
   );
 });
 
@@ -61,6 +64,23 @@ shareRoutes.post('/share/:linkId/deactivate', requireAuth, async (c) => {
   await deactivateShareLink(c.env.DB, linkId);
   const referer = c.req.header('Referer') || '/';
   return c.redirect(referer);
+});
+
+// Remove collaborator (owner only)
+shareRoutes.post('/:projectId/collaborators/:userId/remove', requireAuth, async (c) => {
+  const user = c.get('user')!;
+  const projectId = c.req.param('projectId')!;
+  const targetUserId = c.req.param('userId')!;
+  const project = await getProjectById(c.env.DB, projectId);
+  if (!project || project.owner_id !== user.id) {
+    return c.text('Forbidden', 403);
+  }
+  // Cannot remove the owner
+  if (targetUserId === project.owner_id) {
+    return c.redirect(`/projects/${projectId}/share`);
+  }
+  await removeCollaborator(c.env.DB, projectId, targetUserId);
+  return c.redirect(`/projects/${projectId}/share?ok=collaborator-removed`);
 });
 
 // Accept share link (public route - redirects to login if needed)

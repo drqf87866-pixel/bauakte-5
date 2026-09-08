@@ -725,6 +725,97 @@ export async function isCollaborator(
   return row !== null;
 }
 
+export async function getCollaboratorsForProject(
+  db: D1Database,
+  projectId: string
+): Promise<(User & { created_at: string })[]> {
+  return db
+    .prepare(
+      `SELECT u.id, u.email, u.name, pc.created_at FROM users u
+       JOIN project_collaborators pc ON pc.user_id = u.id
+       WHERE pc.project_id = ?
+       ORDER BY pc.created_at DESC`
+    )
+    .bind(projectId)
+    .all<User & { created_at: string }>()
+    .then(r => r.results);
+}
+
+export async function removeCollaborator(
+  db: D1Database,
+  projectId: string,
+  userId: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('DELETE FROM project_collaborators WHERE project_id = ? AND user_id = ?')
+    .bind(projectId, userId)
+    .run();
+  return result.success;
+}
+
+export async function deleteUploads(
+  db: D1Database,
+  uploadIds: string[]
+): Promise<boolean> {
+  if (uploadIds.length === 0) return true;
+  const placeholders = uploadIds.map(() => '?').join(',');
+  const result = await db
+    .prepare(`DELETE FROM uploads WHERE id IN (${placeholders})`)
+    .bind(...uploadIds)
+    .run();
+  return result.success;
+}
+
+export async function moveUploadsToPhase(
+  db: D1Database,
+  uploadIds: string[],
+  targetPhaseId: string
+): Promise<boolean> {
+  if (uploadIds.length === 0) return true;
+  const placeholders = uploadIds.map(() => '?').join(',');
+  const result = await db
+    .prepare(`UPDATE uploads SET phase_id = ? WHERE id IN (${placeholders})`)
+    .bind(targetPhaseId, ...uploadIds)
+    .run();
+  return result.success;
+}
+
+// ===== Password Reset Tokens =====
+export async function createPasswordResetToken(
+  db: D1Database,
+  id: string,
+  userId: string,
+  token: string,
+  expiresAt: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('INSERT INTO password_reset_tokens (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)')
+    .bind(id, userId, token, expiresAt)
+    .run();
+  return result.success;
+}
+
+export async function getPasswordResetToken(
+  db: D1Database,
+  token: string
+): Promise<{ id: string; user_id: string; expires_at: string; used: number } | null> {
+  return db
+    .prepare("SELECT * FROM password_reset_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')")
+    .bind(token)
+    .first();
+}
+
+export async function markResetTokenUsed(
+  db: D1Database,
+  tokenId: string
+): Promise<boolean> {
+  const result = await db
+    .prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?')
+    .bind(tokenId)
+    .run();
+  return result.success;
+}
+
 // ===== Upload Editing =====
 export async function updateUploadTags(
   db: D1Database,
